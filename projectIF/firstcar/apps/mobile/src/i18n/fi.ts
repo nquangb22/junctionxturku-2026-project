@@ -382,4 +382,10 @@ export const fi: Record<MessageKey, string> = {
   'claims.editQuote': 'Mitä ilmoituksessa lukee',
   'seller.privateTitle': 'Yksityinen myyjä',
   'seller.privateBody': 'Kauppalaki koskee kauppaa, ei kuluttajansuojalaki. Lakisääteistä takuuta ei ole: tarkista kaikki ennen maksamista.',
+  'contract.fieldsTitle': 'Täytä tyhjät kohdat',
+  'contract.field.seller': 'Myyjän koko nimi',
+  'contract.field.buyer': 'Oma koko nimesi',
+  'contract.field.vin': 'Valmistenumero (autosta tai rekisteriotteesta)',
+  'contract.field.odometer': 'Mittarilukema luovutettaessa (km)',
+  'contract.field.handover': 'Luovutuspäivä ja -aika',
 };

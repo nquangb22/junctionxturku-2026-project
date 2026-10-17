@@ -380,6 +380,12 @@ export const en = {
   'claims.editQuote': 'What the ad says',
   'seller.privateTitle': 'Private seller',
   'seller.privateBody': 'The Sale of Goods Act applies, not consumer protection. No statutory warranty: check everything before paying.',
+  'contract.fieldsTitle': 'Fill in the blanks',
+  'contract.field.seller': 'Seller’s full name',
+  'contract.field.buyer': 'Your full name',
+  'contract.field.vin': 'VIN (from the car or the registration certificate)',
+  'contract.field.odometer': 'Odometer at handover (km)',
+  'contract.field.handover': 'Handover date and time',
 } as const;
 
 export type MessageKey = keyof typeof en;

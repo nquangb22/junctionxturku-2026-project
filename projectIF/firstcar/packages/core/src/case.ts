@@ -20,6 +20,7 @@ import type {
   CaseStatus,
   ClaimType,
   ClaimValue,
+  ContractField,
   CoverIntent,
   Evidence,
   EvidenceFact,
@@ -53,6 +54,7 @@ export type CaseEvent =
   | { type: 'inspection_skipped' }
   | { type: 'start_contract' }
   | { type: 'clause_toggled'; clauseId: string }
+  | { type: 'contract_field_set'; field: ContractField; value: string }
   | { type: 'mark_ready' }
   | { type: 'walk_away' }
   | { type: 'reopen' }
@@ -311,6 +313,10 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
     case 'clause_toggled':
       if (!ledgerOpen) return fail('ledger_closed');
       return bump(c, settle({ ...c, clauses: c.clauses.map((cl) => (cl.id === e.clauseId ? { ...cl, included: !cl.included } : cl)) }, ctx), ctx);
+
+    case 'contract_field_set':
+      if (!ledgerOpen) return fail('ledger_closed');
+      return bump(c, settle({ ...c, contractFields: { ...c.contractFields, [e.field]: e.value.trim().slice(0, 120) } }, ctx), ctx);
 
     case 'mark_ready':
       if (c.status !== 'contract_prep') return fail('invalid_transition');

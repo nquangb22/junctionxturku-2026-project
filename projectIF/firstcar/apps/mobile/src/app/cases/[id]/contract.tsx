@@ -1,7 +1,8 @@
-import { CONTRACT_DISCLAIMER, contractText } from '@firstcar/core';
+import { CONTRACT_DISCLAIMER, contractFieldValues, contractText, type ContractField, type PurchaseCase } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import { Platform, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
@@ -57,6 +58,7 @@ export default function Contract() {
           <Txt variant="bodyStrong">⚠️ {t('contract.disputedWarning')}</Txt>
         </Card>
       ) : null}
+      {editable ? <ContractFields c={c} /> : null}
       {c.clauses.map((cl) => (
         <Pressable
           key={cl.id}
@@ -83,7 +85,45 @@ export default function Contract() {
   );
 }
 
+const FIELDS: { field: ContractField; numeric?: boolean }[] = [{ field: 'seller' }, { field: 'buyer' }, { field: 'vin' }, { field: 'odometer', numeric: true }, { field: 'handover' }];
+
+/** The contract blanks as inputs. Saved when a field loses focus, so typing does not regenerate every clause. */
+function ContractFields({ c }: { c: PurchaseCase }) {
+  const { t } = useSession();
+  const { caseEvent } = useStore();
+  const p = usePalette();
+  const prefilled = contractFieldValues(c);
+  const [draft, setDraft] = useState<Partial<Record<ContractField, string>>>(() =>
+    Object.fromEntries(FIELDS.map(({ field }) => [field, c.contractFields?.[field] ?? (prefilled[field] === '______' ? '' : prefilled[field])])),
+  );
+  const commit = (field: ContractField) => {
+    const value = draft[field] ?? '';
+    if (value !== (c.contractFields?.[field] ?? '')) caseEvent(c.id, { type: 'contract_field_set', field, value });
+  };
+  return (
+    <View style={{ gap: Spacing.sm }}>
+      <Txt variant="bodyStrong">{t('contract.fieldsTitle')}</Txt>
+      {FIELDS.map(({ field, numeric }) => (
+        <TextInput
+          key={field}
+          value={draft[field] ?? ''}
+          onChangeText={(v) => setDraft((d) => ({ ...d, [field]: v }))}
+          onBlur={() => commit(field)}
+          placeholder={t(`contract.field.${field}`)}
+          placeholderTextColor={p.textSecondary}
+          accessibilityLabel={t(`contract.field.${field}`)}
+          keyboardType={numeric ? 'number-pad' : 'default'}
+          autoCorrect={false}
+          maxLength={120}
+          style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+        />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  input: { minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
   clause: { borderWidth: 1.5, borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.xs },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
 });

@@ -162,3 +162,17 @@ describe('editing a claim (T7)', () => {
     expect(applyEvent(c, { type: 'claim_edited', claimId: odo.id, quote: '  ' }, ctx)).toEqual({ ok: false, error: 'empty_quote' });
   });
 });
+
+describe('contract blanks (S7)', () => {
+  it('prefills known values, keeps typed ones, and blanks the rest', () => {
+    const c = golf();
+    const parties = () => c.clauses.find((cl) => cl.kind === 'parties')!.text;
+    expect(parties()).toContain('Seller: ______');
+    const filled = apply(c, { type: 'contract_field_set', field: 'buyer', value: '  Aino Ostaja ' }, { type: 'contract_field_set', field: 'handover', value: '20.10.2026 at 17:00' });
+    const text = (kind: string) => filled.clauses.find((cl) => cl.kind === kind)!.text;
+    expect(text('parties')).toContain('Buyer: Aino Ostaja.');
+    expect(text('handover_time')).toContain('20.10.2026 at 17:00');
+    const owner = apply(filled, { type: 'owner_compared', sellerNameFromId: 'Mikko Mallikas' });
+    expect(owner.clauses.find((cl) => cl.kind === 'parties')!.text).toContain('Seller: Mikko Mallikas');
+  });
+});

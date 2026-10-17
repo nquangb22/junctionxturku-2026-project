@@ -331,6 +331,8 @@ export interface InspectionPlan {
   prePurchase: { recommended: boolean; reasons: string[]; focus: string[] };
 }
 
+export type ContractField = 'seller' | 'buyer' | 'vin' | 'odometer' | 'handover';
+
 export type ClauseKind =
   | 'parties'
   | 'vehicle_identity'
@@ -403,6 +405,8 @@ export interface PurchaseCase {
   inspectionSkipped?: boolean;
   /** Last saved test-drive checklist answers, by checklist item id. */
   testDriveAnswers?: Record<string, 'ok' | 'issue'>;
+  /** Values the buyer typed into the contract blanks. */
+  contractFields?: Partial<Record<ContractField, string>>;
   /** Demo partner booking for the pre-purchase inspection. */
   inspectionBooking?: { partner: string; date: ISO };
   clauses: ContractClause[];

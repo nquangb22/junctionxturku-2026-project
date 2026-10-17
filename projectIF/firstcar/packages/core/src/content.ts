@@ -283,20 +283,20 @@ export const QUESTION_TEMPLATES: Partial<Record<ClaimType | MandatoryCheckId | '
 /** Contract clause templates (Traficom/KKV checklist style ⚠️ to verify). */
 export const CLAUSE_TEXTS: Record<'parties' | 'vehicle_identity' | 'price_payment' | 'handover_time' | 'documents_keys' | 'ownership_notification' | 'insurance_note', Texts> = {
   parties: {
-    en: 'Seller: ______ (registered owner). Buyer: ______.',
-    fi: 'Myyjä: ______ (rekisteröity omistaja). Ostaja: ______.',
+    en: 'Seller: {seller} (registered owner). Buyer: {buyer}.',
+    fi: 'Myyjä: {seller} (rekisteröity omistaja). Ostaja: {buyer}.',
   },
   vehicle_identity: {
-    en: 'Vehicle: {car}, registration {plate}, VIN ______, odometer at handover ______ km.',
-    fi: 'Ajoneuvo: {car}, rekisterinumero {plate}, valmistenumero ______, mittarilukema luovutettaessa ______ km.',
+    en: 'Vehicle: {car}, registration {plate}, VIN {vin}, odometer at handover {odometer} km.',
+    fi: 'Ajoneuvo: {car}, rekisterinumero {plate}, valmistenumero {vin}, mittarilukema luovutettaessa {odometer} km.',
   },
   price_payment: {
     en: 'Price {price}, paid by bank transfer at handover. No payment before the buyer has seen the car and its papers.',
     fi: 'Kauppahinta {price}, maksetaan tilisiirtona luovutuksen yhteydessä. Ei maksuja ennen kuin ostaja on nähnyt auton ja paperit.',
   },
   handover_time: {
-    en: 'Handover date and time: ______. Risk and responsibility pass to the buyer at this moment.',
-    fi: 'Luovutuspäivä ja -aika: ______. Vastuu autosta siirtyy ostajalle tällä hetkellä.',
+    en: 'Handover date and time: {handover}. Risk and responsibility pass to the buyer at this moment.',
+    fi: 'Luovutuspäivä ja -aika: {handover}. Vastuu autosta siirtyy ostajalle tällä hetkellä.',
   },
   documents_keys: {
     en: 'Handed over: registration certificate, service book, {keys} key(s).',
@@ -324,8 +324,8 @@ export const DISPUTED_TEXT: Texts = {
 };
 
 export const DISPUTED_ODOMETER_TEXT: Texts = {
-  en: 'Odometer reading at handover: ______ km. The registry recorded {regKm} at the {date} inspection; the seller’s ad stated {adKm}. Both parties confirm the reading above.',
-  fi: 'Mittarilukema luovutuksessa: ______ km. Rekisteriin kirjattiin {regKm} katsastuksessa {date}; myyjän ilmoituksessa luki {adKm}. Molemmat osapuolet vahvistavat yllä olevan lukeman.',
+  en: 'Odometer reading at handover: {odometer} km. The registry recorded {regKm} at the {date} inspection; the seller’s ad stated {adKm}. Both parties confirm the reading above.',
+  fi: 'Mittarilukema luovutuksessa: {odometer} km. Rekisteriin kirjattiin {regKm} katsastuksessa {date}; myyjän ilmoituksessa luki {adKm}. Molemmat osapuolet vahvistavat yllä olevan lukeman.',
 };
 
 export const DISCLOSED_DEFECTS_TEXT: Texts = {
