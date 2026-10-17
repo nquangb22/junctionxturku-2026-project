@@ -13,7 +13,7 @@ import {
   findModelNote,
   renderTemplate,
 } from './content';
-import { claimForItem, isStale, itemTitle, monthYear } from './ledger';
+import { claimForItem, isStale, itemTitle, latestEvidenceFor, monthYear } from './ledger';
 import { formatEur, formatKm } from './money';
 import { quoteTranslationFor } from './translate';
 import type { ChecklistItem, ContractClause, ContractField, InspectionPlan, Locale, PurchaseCase, SellerClaim, VerificationItem } from './types';
@@ -145,9 +145,9 @@ function translationSuffix(claim: SellerClaim, locale: Locale): string {
   return tr ? (locale === 'fi' ? ` (”${tr}”)` : ` (“${tr}”)`) : '';
 }
 
-/** Evidence or a finding says the claim is false. */
+/** The latest evidence, or a current finding, says the claim is false. */
 export function isContradicted(c: PurchaseCase, item: VerificationItem): boolean {
-  return item.findings.some((f) => f.kind === 'contradiction') || c.evidence.some((e) => e.outcome === 'contradicts' && e.itemIds.includes(item.id));
+  return item.findings.some((f) => f.kind === 'contradiction') || latestEvidenceFor(c, item.id)?.outcome === 'contradicts';
 }
 
 /** A contradicted claim is recorded as disputed, never assured: the seller must not sign what the buyer knows is false. */

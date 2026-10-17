@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { applyEvent, createCase, evaluateGate, type CaseEvent, type Ctx } from '../case';
 import { DEMO_ADS, MOCK_REGISTRY } from '../fixtures';
-import { beltDueCost, contractText, inspectionPlan, openQuestions, questionFor } from '../generators';
+import { beltDueCost, contractText, inspectionPlan, isContradicted, openQuestions, questionFor } from '../generators';
 import { isMandatoryItem, itemTitle, renderFinding } from '../ledger';
 import { eur, formatKm } from '../money';
 import { analyseAd } from '../pipeline';
 import { remindersFor } from '../reminders';
-import type { PurchaseCase, RegistryCheck } from '../types';
+import type { EvidenceKind, PurchaseCase, RegistryCheck } from '../types';
 
 const NOW = new Date('2026-10-17T10:00:00Z');
 const ctx: Ctx = { now: NOW, locale: 'en' };
@@ -355,5 +355,53 @@ describe('mandatory tag', () => {
     expect(c.claims.some((cl) => cl.type === 'inspection_valid')).toBe(false);
     expect(c.items.filter((i) => i.origin.kind === 'mandatory')).toHaveLength(6);
     expect(c.items.filter(isMandatoryItem)).toHaveLength(6);
+  });
+});
+
+describe('status follows the latest evidence', () => {
+  const ev = (kind: EvidenceKind, itemId: string, outcome: 'supports' | 'contradicts' | 'neutral'): CaseEvent =>
+    ({ type: 'evidence_added', kind, itemIds: [itemId], outcome });
+
+  it('newer weaker evidence overrules older stronger evidence', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = claimItem(c, 'service_history').id;
+
+    const verified = apply(c, ev('service_record', id, 'supports'));
+    expect(item(verified, id).status).toBe('verified');
+
+    const contradicted = apply(verified, ev('photo', id, 'contradicts'));
+    expect(item(contradicted, id).status).toBe('not_verified');
+    expect(item(contradicted, id).evidenceIds).toHaveLength(2); // history is kept
+  });
+
+  it('a later seller message clears a problem but cannot verify', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = claimItem(c, 'no_accidents').id;
+
+    const found = apply(c, ev('inspection_report', id, 'contradicts'));
+    expect(item(found, id).status).toBe('not_verified');
+    expect(isContradicted(found, item(found, id))).toBe(true);
+
+    const sellerSays = apply(found, ev('seller_message', id, 'supports'));
+    expect(item(sellerSays, id).status).toBe('needs_inspection');
+    expect(isContradicted(sellerSays, item(sellerSays, id))).toBe(false);
+  });
+
+  it('evidence below the minimum strength does not verify, even when latest', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = claimItem(c, 'service_history').id; // needs a document
+    expect(item(apply(c, ev('photo', id, 'supports')), id).status).toBe('awaiting_evidence');
+  });
+
+  it('a blocking red flag from older evidence is cleared by newer evidence', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' }, { type: 'registry_result', registry: registry('XYZ-789') });
+    const ownerId = 'mandatory:owner_matches_seller';
+
+    const wrong = apply(c, { type: 'owner_compared', sellerNameFromId: 'Someone Else' });
+    expect(item(wrong, ownerId).status).toBe('not_verified');
+
+    const right = apply(wrong, { type: 'owner_compared', sellerNameFromId: 'Anna Esimerkki' });
+    expect(item(right, ownerId).status).toBe('verified');
+    expect(item(right, ownerId).findings.some((f) => f.kind === 'red_flag')).toBe(false);
   });
 });
