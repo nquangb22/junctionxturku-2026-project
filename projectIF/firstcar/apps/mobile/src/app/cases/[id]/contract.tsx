@@ -10,6 +10,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { CaseProgress } from '@/ui/case-steps';
 import { notify } from '@/ui/dialog';
 import { Icon, IconLine } from '@/ui/icon';
 import { ICON_IN, PressableScale, tick } from '@/ui/motion';
@@ -53,7 +54,7 @@ export default function Contract() {
   };
 
   return (
-    <Screen footer={<Button label={t('contract.next')} onPress={() => router.push({ pathname: '/cases/[id]/decide', params: { id: c.id } })} />}>
+    <Screen footer={<Button label={t('contract.next')} onPress={() => router.push({ pathname: '/cases/[id]/decide', params: { id: c.id } })} />} top={<CaseProgress c={c} current="contract" t={t} />}>
       <Stack.Screen options={{ title: t('contract.title') }} />
       <Txt variant="h2">{t('contract.body')}</Txt>
       {c.clauses.some((cl) => cl.kind === 'disputed_claim') ? (

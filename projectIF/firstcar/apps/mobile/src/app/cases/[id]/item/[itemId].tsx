@@ -25,6 +25,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { CaseProgress } from '@/ui/case-steps';
 import { IconLine } from '@/ui/icon';
 import { ClaimPhoto, itemPhoto } from '@/ui/photos';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
@@ -79,7 +80,7 @@ export default function ItemDetail() {
   };
 
   return (
-    <Screen>
+    <Screen top={<CaseProgress c={c} current="ledger" t={t} />}>
       <Stack.Screen options={{ title: itemTitle(item, prefs.locale) }} />
       {photo ? <ClaimPhoto source={photo} t={t} /> : null}
       <View style={styles.badges}>

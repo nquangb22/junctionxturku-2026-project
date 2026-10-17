@@ -1,6 +1,6 @@
 /** English UI strings. Plain language (CEFR B1). {param} placeholders are filled by t(). */
 export const en = {
-  appName: 'FirstCar',
+  appName: 'CarCheck',
   'common.continue': 'Continue',
   'common.cancel': 'Cancel',
   'common.ok': 'OK',
@@ -23,10 +23,10 @@ export const en = {
   'welcome.p3': 'This is a checklist guide, not legal or insurance advice. You decide.',
   'welcome.cta': 'Start',
 
-  'lock.title': 'FirstCar is locked',
+  'lock.title': 'CarCheck is locked',
   'lock.body': 'Unlock to see your budget and the cars you are checking.',
   'lock.unlock': 'Unlock',
-  'lock.prompt': 'Unlock FirstCar',
+  'lock.prompt': 'Unlock CarCheck',
   'lock.failed': 'Could not unlock. Try again.',
   'lock.keyLost': 'The encryption key is gone (for example, your biometrics changed). The saved data cannot be read.',
   'lock.reset': 'Delete everything and start again',
@@ -417,12 +417,13 @@ export const en = {
   'photo.exampleTag': 'Example photo',
   'photo.galleryLabel': 'Example photos of a {model}: front, back and inside. Not the car in this ad.',
   'home.demoTitle': 'Try an example ad',
-  'home.demoBody': 'Pick a car to see how FirstCar checks an ad.',
-  'lock.attemptsLeft.one': 'Could not unlock. 1 attempt left before FirstCar locks for a while.',
-  'lock.attemptsLeft.other': 'Could not unlock. {n} attempts left before FirstCar locks for a while.',
+  'home.demoBody': 'Pick a car to see how CarCheck reviews an ad.',
+  'lock.attemptsLeft.one': 'Could not unlock. 1 attempt left before CarCheck locks for a while.',
+  'lock.attemptsLeft.other': 'Could not unlock. {n} attempts left before CarCheck locks for a while.',
   'lock.banned': 'Too many failed attempts. Try again in {time}.',
   'lock.bannedHint': 'Each further failed attempt makes the wait longer.',
   'lock.bannedButton': 'Locked · {time}',
+  'case.progress': 'Step {n} of {total}: {step}',
 } as const;
 
 export type MessageKey = keyof typeof en;

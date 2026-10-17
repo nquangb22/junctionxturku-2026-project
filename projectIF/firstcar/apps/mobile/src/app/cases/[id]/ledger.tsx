@@ -7,6 +7,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase } from '@/state/store';
+import { CaseProgress } from '@/ui/case-steps';
 import { IconLine, type IconName } from '@/ui/icon';
 import { itemPhoto, PhotoThumb } from '@/ui/photos';
 import { Badge, NavCard, Screen } from '@/ui/primitives';
@@ -23,7 +24,7 @@ export default function Ledger() {
   const items = [...c.items].sort((a, b) => ORDER[a.status] - ORDER[b.status] || CRIT_ORDER[a.criticality] - CRIT_ORDER[b.criticality]);
 
   return (
-    <Screen>
+    <Screen top={<CaseProgress c={c} current="ledger" t={t} />}>
       <Stack.Screen options={{ title: t('ledger.title') }} />
       {c.registry?.isMock ? <IconLine icon="info" variant="caption">{t('common.demoData')}: traficom-mock</IconLine> : null}
       {items.map((item) => (

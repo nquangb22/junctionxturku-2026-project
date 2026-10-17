@@ -9,6 +9,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { CaseProgress } from '@/ui/case-steps';
 import { IconLine } from '@/ui/icon';
 import { Button, Card, NavCard, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
@@ -50,7 +51,7 @@ export default function Registry() {
   const odometerItem = c.items.find((i) => i.origin.kind === 'claim' && i.origin.claimType === 'odometer');
 
   return (
-    <Screen footer={reg ? <Button label={t('common.next', { step: t('case.step.ledger') })} onPress={toLedger} /> : undefined}>
+    <Screen footer={reg ? <Button label={t('common.next', { step: t('case.step.ledger') })} onPress={toLedger} /> : undefined} top={<CaseProgress c={c} current="registry" t={t} />}>
       <Stack.Screen options={{ title: t('registry.title') }} />
       <Txt>{t('registry.body')}</Txt>
       <DemoBadge t={t} />

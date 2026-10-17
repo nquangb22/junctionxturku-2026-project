@@ -8,6 +8,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { caseTitle, formatDate } from '@/ui/case-helpers';
+import { CaseProgress } from '@/ui/case-steps';
 import { IconLine } from '@/ui/icon';
 import { InsuredCard } from '@/ui/insured-card';
 import { Button, Card, Choice, Row, Screen, Section, Txt } from '@/ui/primitives';
@@ -88,7 +89,7 @@ export default function Insure() {
   };
 
   return (
-    <Screen>
+    <Screen top={<CaseProgress c={c} current="insure" t={t} />}>
       <Stack.Screen options={{ title: t('insure.title') }} />
       <Card tone="warning">
         <Txt variant="h2">{t('insure.mandatory')}</Txt>
