@@ -7,13 +7,15 @@ import {
   CLAIM_TITLES,
   CLAUSE_TEXTS,
   DISCLOSED_DEFECTS_TEXT,
+  DISPUTED_ODOMETER_TEXT,
+  DISPUTED_TEXT,
   QUESTION_TEMPLATES,
   findModelNote,
   renderTemplate,
 } from './content';
-import { claimForItem, isStale, itemTitle } from './ledger';
-import { formatEur } from './money';
-import type { ChecklistItem, ContractClause, InspectionPlan, Locale, PurchaseCase, VerificationItem } from './types';
+import { claimForItem, isStale, itemTitle, monthYear } from './ledger';
+import { formatEur, formatKm } from './money';
+import type { ChecklistItem, ContractClause, InspectionPlan, Locale, PurchaseCase, SellerClaim, VerificationItem } from './types';
 
 export interface SellerQuestion {
   itemId: string;
@@ -116,6 +118,21 @@ export function inspectionPlan(c: PurchaseCase, locale: Locale, now: Date): Insp
 
 const ASSURANCE_EXCLUDED = new Set(['seller_situation', 'other', 'price']);
 
+/** Evidence or a finding says the claim is false. */
+export function isContradicted(c: PurchaseCase, item: VerificationItem): boolean {
+  return item.findings.some((f) => f.kind === 'contradiction') || c.evidence.some((e) => e.outcome === 'contradicts' && e.itemIds.includes(item.id));
+}
+
+/** A contradicted claim is recorded as disputed, never assured: the seller must not sign what the buyer knows is false. */
+function disputedClause(c: PurchaseCase, item: VerificationItem, claim: SellerClaim, title: string, locale: Locale): ContractClause {
+  const regKm = c.registry?.inspection?.odometerKmAtLast;
+  const text =
+    claim.type === 'odometer' && claim.value.kind === 'km' && regKm !== undefined
+      ? renderTemplate(DISPUTED_ODOMETER_TEXT[locale], { regKm: formatKm(regKm), date: monthYear(c.registry?.inspection?.lastDate ?? ''), adKm: formatKm(claim.value.km) })
+      : renderTemplate(DISPUTED_TEXT[locale], { claim: title, quote: claim.quote });
+  return { id: `dispute:${item.id}`, kind: 'disputed_claim', text, sourceItemIds: [item.id], included: true };
+}
+
 /**
  * Builds the contract draft. Every seller claim the buyer relies on that is not verified
  * becomes a seller_assurance clause: what you could not verify, you get in writing.
@@ -141,6 +158,7 @@ export function generateClauses(c: PurchaseCase, locale: Locale, previous: Contr
     .map((i) => {
       const claim = claimForItem(c, i)!;
       const title = CLAIM_TITLES[claim.type][locale];
+      if (isContradicted(c, i)) return disputedClause(c, i, claim, title, locale);
       return {
         id: `assurance:${i.id}`,
         kind: 'seller_assurance',

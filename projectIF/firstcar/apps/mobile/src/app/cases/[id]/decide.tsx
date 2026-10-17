@@ -9,6 +9,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { carForCase } from '@/ui/case-helpers';
+import { confirmAction } from '@/ui/dialog';
 import { Badge, Button, Card, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Decide() {
@@ -34,6 +35,23 @@ export default function Decide() {
   };
 
   const bought = ['bought', 'insuring', 'registered', 'owned'].includes(c.status);
+
+  const confirmBuy = () =>
+    confirmAction({
+      title: t('decide.buy'),
+      message: t('decide.buyConfirm'),
+      confirmLabel: t('decide.buy'),
+      cancelLabel: t('common.cancel'),
+      onConfirm: () => act({ type: 'buy' }, () => router.push({ pathname: '/cases/[id]/insure', params: { id: c.id } })),
+    });
+  const confirmWalkAway = () =>
+    confirmAction({
+      title: t('case.walkAway'),
+      message: t('case.walkAwayConfirm'),
+      confirmLabel: t('case.walkAway'),
+      cancelLabel: t('common.cancel'),
+      onConfirm: () => act({ type: 'walk_away' }, () => router.dismissTo('/')),
+    });
 
   return (
     <Screen>
@@ -81,12 +99,12 @@ export default function Decide() {
       {c.status === 'ready_to_buy' ? (
         <>
           <Badge tone="success" label={t('caseStatus.ready_to_buy')} />
-          <Button label={t('decide.buy')} onPress={() => act({ type: 'buy' }, () => router.push({ pathname: '/cases/[id]/insure', params: { id: c.id } }))} />
+          <Button label={t('decide.buy')} onPress={confirmBuy} />
         </>
       ) : null}
       {!bought && c.status !== 'contract_prep' && c.status !== 'ready_to_buy' ? <Txt variant="small">{t('decide.notInStep')}</Txt> : null}
       {!bought && c.status !== 'walked_away' ? (
-        <Button kind="ghost" label={t('case.walkAway')} onPress={() => act({ type: 'walk_away' }, () => router.replace('/'))} />
+        <Button kind="ghost" label={t('case.walkAway')} onPress={confirmWalkAway} />
       ) : null}
     </Screen>
   );

@@ -315,6 +315,7 @@ export type ClauseKind =
   | 'price_payment'
   | 'handover_time'
   | 'seller_assurance'
+  | 'disputed_claim'
   | 'disclosed_defects'
   | 'documents_keys'
   | 'ownership_notification'
@@ -376,6 +377,8 @@ export interface PurchaseCase {
   registry?: RegistryCheck;
   testDriveDone: boolean;
   inspectionDone: boolean;
+  /** The buyer chose to go on without a pre-purchase inspection; inspectable items stay open. */
+  inspectionSkipped?: boolean;
   clauses: ContractClause[];
   /** Last include/exclude choice per assurance clause id, kept while the clause is absent (item verified). */
   assuranceChoices?: Record<string, boolean>;

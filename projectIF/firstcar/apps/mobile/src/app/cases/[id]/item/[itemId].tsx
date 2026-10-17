@@ -1,7 +1,10 @@
 import {
   claimForItem,
+  formatEur,
+  formatKm,
   hasBlockingFlag,
   itemTitle,
+  mileageGap,
   questionFor,
   renderFinding,
   type Evidence,
@@ -21,6 +24,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
+import { confirmAction } from '@/ui/dialog';
 import { StatusPill } from '@/ui/status';
 
 const USER_EVIDENCE: EvidenceKind[] = ['service_record', 'receipt', 'photo', 'test_drive_note', 'seller_message'];
@@ -44,6 +48,20 @@ export default function ItemDetail() {
   const question = questionFor(c, item, prefs.locale);
   const blocking = hasBlockingFlag(item);
   const run = (err: string | undefined) => setError(err ? t('common.error', { error: err }) : undefined);
+  const gap = claim?.type === 'odometer' ? mileageGap(c, new Date()) : undefined;
+
+  const accept = () => run(caseEvent(c.id, { type: 'risk_accepted', itemId: item.id }));
+  // A critical risk is accepted only after the buyer has seen what was found.
+  const confirmAccept = () =>
+    item.criticality === 'critical'
+      ? confirmAction({
+          title: t('item.acceptCriticalTitle'),
+          message: t('item.acceptCriticalBody', { findings: item.findings.map((f) => renderFinding(f, prefs.locale)).join('\n\n') || '—' }),
+          confirmLabel: t('item.acceptConfirm'),
+          cancelLabel: t('common.cancel'),
+          onConfirm: accept,
+        })
+      : accept();
 
   const copy = async () => {
     if (!question) return;
@@ -79,6 +97,19 @@ export default function ItemDetail() {
               <Txt variant="bodyStrong">{renderFinding(f, prefs.locale)}</Txt>
             </Card>
           ))}
+        </Section>
+      ) : null}
+
+      {gap ? (
+        <Section title={t('mileage.title')}>
+          <Card tone="warning">
+            <Badge tone="neutral" label={t('common.estimate')} />
+            <Txt>{t('mileage.value', { amount: formatEur(gap.valueImpact), adKm: formatKm(gap.adKm), diffKm: formatKm(gap.diffKm), perKm: gap.eurPerKm.toFixed(2) })}</Txt>
+            {gap.maintenanceDue.map((m) => (
+              <Txt key={m.kind}>{t('mileage.belt', { km: formatKm(m.dueAtKm), amount: formatEur(m.cost) })}</Txt>
+            ))}
+            <Txt variant="bodyStrong">{t('mileage.total', { amount: formatEur(gap.total) })}</Txt>
+          </Card>
         </Section>
       ) : null}
 
@@ -123,7 +154,7 @@ export default function ItemDetail() {
         ) : item.acceptedRisk ? (
           <Button kind="ghost" label={t('item.unaccept')} onPress={() => run(caseEvent(c.id, { type: 'risk_unaccepted', itemId: item.id }))} />
         ) : (
-          <Button kind="secondary" label={t('item.acceptRisk')} onPress={() => run(caseEvent(c.id, { type: 'risk_accepted', itemId: item.id }))} />
+          <Button kind="secondary" label={t('item.acceptRisk')} onPress={confirmAccept} />
         )
       ) : null}
     </Screen>

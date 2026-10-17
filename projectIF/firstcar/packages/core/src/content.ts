@@ -147,8 +147,8 @@ export const SCENARIO_ITEM_TITLES: Record<string, Texts> = {
 /** Finding texts. {param} placeholders are filled by renderTemplate(). */
 export const FINDING_TEXTS: Record<FindingCode, Texts> = {
   odometer_rollback: {
-    en: 'The ad says {adKm}. At its inspection on {date} the odometer read {regKm}.',
-    fi: 'Ilmoituksessa lukee {adKm}. Katsastuksessa {date} mittarilukema oli {regKm}.',
+    en: 'The ad says {adKm}. At its inspection on {date} the odometer read {regKm}: {diffKm} more than the ad (+{pct} %). An odometer cannot legally go down, so either the ad is wrong or the odometer has been tampered with (a crime in Finland).',
+    fi: 'Ilmoituksessa lukee {adKm}. Katsastuksessa {date} mittarilukema oli {regKm}: {diffKm} enemmän kuin ilmoituksessa (+{pct} %). Mittarilukema ei voi laillisesti laskea, joten joko ilmoitus on väärin tai mittaria on peukaloitu (rikos Suomessa).',
   },
   odometer_consistent: {
     en: 'Consistent with the registry ({regKm} at inspection on {date}).',
@@ -311,6 +311,17 @@ export const CLAUSE_TEXTS: Record<'parties' | 'vehicle_identity' | 'price_paymen
 export const ASSURANCE_TEXT: Texts = {
   en: 'Seller assures that this is true: “{quote}” ({claim}). If it proves untrue, the buyer may claim a price reduction or cancel the sale.',
   fi: 'Myyjä vakuuttaa tämän pitävän paikkansa: ”{quote}” ({claim}). Jos se osoittautuu vääräksi, ostaja voi vaatia hinnanalennusta tai purkaa kaupan.',
+};
+
+/** Replaces the seller assurance for a claim the checks contradicted: never ask the seller to assure a known falsehood. */
+export const DISPUTED_TEXT: Texts = {
+  en: 'The ad stated: “{quote}” ({claim}). The buyer’s checks contradict this. Actual condition agreed at handover: ______. Both parties confirm the statement above.',
+  fi: 'Ilmoituksessa luki: ”{quote}” ({claim}). Ostajan tarkistukset ovat ristiriidassa tämän kanssa. Luovutuksessa todettu todellinen kunto: ______. Molemmat osapuolet vahvistavat yllä olevan.',
+};
+
+export const DISPUTED_ODOMETER_TEXT: Texts = {
+  en: 'Odometer reading at handover: ______ km. The registry recorded {regKm} at the {date} inspection; the seller’s ad stated {adKm}. Both parties confirm the reading above.',
+  fi: 'Mittarilukema luovutuksessa: ______ km. Rekisteriin kirjattiin {regKm} katsastuksessa {date}; myyjän ilmoituksessa luki {adKm}. Molemmat osapuolet vahvistavat yllä olevan lukeman.',
 };
 
 export const DISCLOSED_DEFECTS_TEXT: Texts = {

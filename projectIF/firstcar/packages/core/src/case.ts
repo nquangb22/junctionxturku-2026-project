@@ -48,6 +48,7 @@ export type CaseEvent =
   | { type: 'start_inspection' }
   | { type: 'test_drive_done' }
   | { type: 'inspection_result'; outcomes: Record<string, 'ok' | 'issue'> }
+  | { type: 'inspection_skipped' }
   | { type: 'start_contract' }
   | { type: 'clause_toggled'; clauseId: string }
   | { type: 'mark_ready' }
@@ -275,11 +276,16 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
       return bump(c, settle({ ...acc, inspectionDone: true }, ctx), ctx);
     }
 
+    case 'inspection_skipped':
+      if (c.status !== 'checking' && c.status !== 'inspecting') return fail('invalid_transition');
+      if (!c.registry) return fail('registry_missing');
+      return bump(c, { ...c, status: 'inspecting', inspectionSkipped: true }, ctx);
+
     case 'start_contract': {
       if (c.status !== 'inspecting') return fail('invalid_transition');
       if (!c.testDriveDone) return fail('test_drive_missing');
       const plan = inspectionPlan(c, ctx.locale, ctx.now);
-      if (plan.prePurchase.recommended && !c.inspectionDone) return fail('inspection_missing');
+      if (plan.prePurchase.recommended && !c.inspectionDone && !c.inspectionSkipped) return fail('inspection_missing');
       return bump(c, { ...c, status: 'contract_prep' }, ctx);
     }
 

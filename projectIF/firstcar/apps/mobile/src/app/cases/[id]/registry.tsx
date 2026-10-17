@@ -1,4 +1,4 @@
-import { formatKm } from '@firstcar/core';
+import { formatKm, mileageGap } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
@@ -9,7 +9,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
-import { Button, Card, Row, Screen, Section, Txt } from '@/ui/primitives';
+import { Button, Card, NavCard, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
 
 const monthYear = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
@@ -45,13 +45,11 @@ export default function Registry() {
   };
 
   const toLedger = () => router.push({ pathname: '/cases/[id]/ledger', params: { id: c.id } });
-  const toTestDrive = () => {
-    if (c.status === 'checking') caseEvent(c.id, { type: 'start_inspection' });
-    router.push({ pathname: '/cases/[id]/inspection', params: { id: c.id } });
-  };
+  const gap = mileageGap(c, new Date());
+  const odometerItem = c.items.find((i) => i.origin.kind === 'claim' && i.origin.claimType === 'odometer');
 
   return (
-    <Screen footer={reg ? <Button label={t('case.step.ledger')} onPress={toLedger} /> : undefined}>
+    <Screen footer={reg ? <Button label={t('common.next', { step: t('case.step.ledger') })} onPress={toLedger} /> : undefined}>
       <Stack.Screen options={{ title: t('registry.title') }} />
       <Txt>{t('registry.body')}</Txt>
       <DemoBadge t={t} />
@@ -90,6 +88,17 @@ export default function Registry() {
               </>
             ) : null}
           </Card>
+          {gap && reg.inspection ? (
+            <Card tone="danger">
+              <Txt variant="bodyStrong">✕ {t('registry.conflict', { adKm: formatKm(gap.adKm), date: monthYear(reg.inspection.lastDate), regKm: formatKm(gap.registryKm) })}</Txt>
+              {odometerItem ? (
+                <NavCard
+                  title={t('registry.conflictLink')}
+                  onPress={() => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId: odometerItem.id } })}
+                />
+              ) : null}
+            </Card>
+          ) : null}
           <Card tone={reg.tax?.status === 'unpaid' ? 'danger' : 'success'}>
             <Txt variant="bodyStrong">{reg.tax?.status === 'unpaid' ? `✕ ${t('registry.taxUnpaid')}` : `✓ ${t('registry.taxPaid')}`}</Txt>
           </Card>
@@ -100,7 +109,6 @@ export default function Registry() {
               <Txt variant="caption">🔒 {t('registry.ownerLocal')}</Txt>
             </Card>
           ) : null}
-          <Button kind="secondary" label={t('registry.next')} onPress={toTestDrive} />
         </Section>
       ) : null}
     </Screen>
