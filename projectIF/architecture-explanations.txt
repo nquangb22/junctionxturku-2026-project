@@ -1,0 +1,448 @@
+ARCHITECTURE EXPLANATIONS: HeyMom, FirstCar, Move-In Check
+Junction hackathon - If P&C Insurance challenge
+Sources: heymom/docs/architecture.md, firstcar/docs/architecture.md, moving/docs/architecture.md
+Status of all three: design only, no code yet.
+
+================================================================================
+WHAT ALL THREE SHARE
+================================================================================
+
+- Stack: Expo (managed) + EAS dev builds + expo-router on the front end,
+  Supabase EU (Stockholm) on the back end.
+- Repo: a pnpm monorepo with node-linker=hoisted (so Metro can resolve packages).
+- Logic: a zero-dependency packages/core, copied into the Supabase functions
+  folder by a sync-* script, because Deno Edge Functions can't easily import
+  pnpm workspace packages.
+- Shared packages: @team/ui, @team/i18n and @team/kits (a JSON rules evaluator).
+- If P&C gets aggregates only (k >= 10). Every doc promises "never used for
+  pricing".
+
+
+================================================================================
+1. HEYMOM ("Hei Äiti")
+================================================================================
+
+WHAT IT IS
+A daily check that a parent living alone is OK. The system watches for
+silence: if the parent's normal morning activity doesn't show up, it checks
+with her first, then alerts family. It is explicitly not an emergency service.
+
+It has a second mode for when the home is empty (e.g. the parent is in
+hospital). In this "away mode" it watches the house during hard freezes to
+catch heating failures before pipes freeze.
+
+Personas: Aino (74, the person being watched) and Laura (her daughter, the If
+customer).
+
+STACK
+- Mobile: Expo (managed) + EAS dev builds + config plugins, expo-router. One
+  app with two role shells (Aino / Family). Aino can also be "app-less" and
+  rely on the meter and phone calls only.
+- Backend: Supabase EU (Stockholm, Frankfurt fallback): Postgres + Row-Level
+  Security, Deno Edge Functions, pg_cron, Realtime.
+- Demo console: a Vite web app with a simulated clock, meter chart, weather
+  override and a live state-machine view.
+
+MONOREPO LAYOUT
+  apps/mobile           Expo app: (onboarding) / (aino) / (family) route groups
+  apps/demo-console     Vite operator view
+  supabase/functions    ingest-signal, tick, voice-webhook, notify-dispatch,
+                        weather-refresh, baseline-nightly, property-watch,
+                        health, demo-control
+  supabase/functions/_shared/core   GENERATED copy of packages/core
+  packages/core         domain types, state machine, baseline, Clock (zero deps)
+  packages/adapters     signal sources (button, IVR, smart plug, meter-sim,
+                        Datahub stub, HAN stub)
+  packages/weather      FMI + MET Norway clients, freeze/slippery derivation
+  packages/notify       push/email/telegram/sms channels,
+                        VoiceProvider (46elks/Twilio/mock)
+  packages/kits, i18n (fi/sv/en), ui (accessible components)
+  scripts/sync-core.ts  copies core into the Supabase functions folder
+
+MAIN IDEA: ONE ALARM PATH
+- Signals never raise alarms. They only produce proof-of-life events, each
+  with a strength:
+    explicit        button press or IVR key press
+    passive_strong  a clear electricity spike, such as the kettle
+    passive_weak    a small load rise
+- Escalation can only start when no proof arrives before a learned deadline.
+- Escalation always contacts Aino first: a nudge, then a voice call, and only
+  then Laura.
+- Unusual night activity or odd meter patterns never trigger anything.
+- Trade-off stated in the doc: it misses someone who is active but unwell. In
+  return, false alarms stay limited and every alert can be explained.
+
+ESCALATION STATE MACHINE (packages/core)
+  scheduled -> open -> satisfied                (proof arrives)
+               open -> open                     (weak proof extends deadline +30 min, once)
+               open -> nudging -> calling -> alerting -> acknowledged -> resolved
+
+- Nudging: push to Aino at the deadline. After a grace period (20 min, or 10
+  min on icy days) it moves to a call if Aino consented to calls. Without that
+  consent it sends a second nudge and then alerts.
+- Calling: up to 2 IVR calls, 10 min apart. Pressing ANY key counts. Speech is
+  slow, in Aino's language, repeated twice.
+- Alerting: goes to Laura. Unacknowledged after 15 min -> contact #2 + SMS
+  fallback. Any proof sends Laura an "all clear".
+- Away/paused mode cancels any open window.
+
+The engine is a pure, deterministic function, tested by replaying 60 days of
+simulated data:
+  step(state, window, input, now, cfg) -> { next, effects[] }
+  effects: Nudge | PlaceCall | Alert | AllClear
+
+EXECUTION MODEL: CRON TICK, COMPARE-AND-SWAP, OUTBOX
+1. pg_cron runs the tick function every minute.
+2. The tick claims due rows:
+     SELECT ... WHERE next_due_at <= now FOR UPDATE SKIP LOCKED LIMIT 500
+   This scales horizontally without double-processing.
+3. It runs core.step(), then calls SQL function
+   apply_transition(window_id, expected_version, next_state, effects[]),
+   which checks the row's version hasn't changed (compare-and-swap) and writes
+   the state update and outbox rows in one transaction.
+4. notify-dispatch reads the outbox and sends at least once. Duplicates are
+   prevented by:
+   - UNIQUE(idempotency_key) on the outbox (key: windowId:step:channel)
+   - UNIQUE(household_id, dedupe_key) on signal ingestion
+   - deduplicating voice webhooks by provider call id
+5. A Clock is injected everywhere. In ENV=demo it reads a server-side sim_clock
+   row (offset + speed), giving the demo fast-forward for free.
+
+FAILURE HANDLING: FAIL TOWARD ASKING AINO
+- Tick stops: health fn checks last_tick_at < 3 min; an external watchdog pings
+  it. Laura's status turns grey ("checking delayed"). Green expires after 10
+  min and is never shown stale.
+- Backend outage then recovery: catch-up re-evaluates missed windows using the
+  proof's occurredAt (devices buffer offline). No proof -> re-enter at
+  nudging, never alerting.
+- Aino's phone offline: local notification at the deadline as backup; button
+  taps queued.
+- Sensor goes quiet: no special alarm; normal path nudges Aino; setup owner
+  gets a low-priority notice.
+- Voice provider fails: counted as "no answer"; circuit breaker to backup.
+- Push undeliverable: fall back to SMS/email; weekly "HeyMom is working" test.
+
+BASELINE: STATISTICS, NO ML
+- Nightly, separately for weekdays and weekends.
+- Uses firstProofMinute over the last 14 days, excluding away/paused days.
+- Fewer than 7 days of data: uses the declared wake time (default 07:30).
+  Window opens 60 min before, deadline 120 min after.
+- Enough data:
+    window opens at P10 - 30 min
+    deadline = clamp(P90 + max(30, 1.5*IQR), wake+60 ... 11:00)
+    between 7 and 13 days, blended with the declared prior, weighted n/14
+- Icy days: deadline capped at P90 + 15, grace 10 min, plus a "slippery today"
+  tip to Aino.
+- Every result has a one-line explanation, e.g. "Usually active 07:10-08:20
+  (14 days). Today: nothing by 09:05."
+
+Meter readings -> proof:
+- Base load = rolling P20 of 01:00-05:00 consumption over 7 nights.
+- Strong proof: load above base + max(300 W, 3*MAD).
+- Weak proof: load above base + 100 W.
+
+ADAPTERS
+SignalAdapter defines toProofs(), health(), requiredConsent, and a mode of
+push / poll / batch. Country-specific code is limited to MeterAdapter,
+WeatherProvider, voice numbers and i18n.
+
+Fingrid Datahub data arrives about a day late, so it is used only for learning
+the baseline and property watch, never as live proof. Live proof comes from a
+HAN-port meter reader or a smart plug. In the hackathon, CSV replay stands in.
+
+PROPERTY WATCH
+- Separate, low-urgency task, only in away mode.
+- Trigger: hard freeze (<= -15 C) forecast within 48 h AND either
+    daily kWh < 60% of what Aino's history predicts for that temperature
+    (regressed on heating degree days), OR
+    load at base level for 6 h or more.
+- Sends a daytime "home check" alert with a checklist and one partner offer.
+- District-heated homes not supported; a temperature sensor is offered.
+
+PRIVACY
+Trust zones A-E. If P&C only receives aggregates (k >= 10), from a separate
+Supabase project with separate credentials.
+
+Retention:
+  Raw meter data              30 days (pg_cron purge)
+  Proof events                30 days
+  Daily features              90 days
+  Escalation + audit logs     12 months
+  Location                    not collected in the MVP
+
+Laura can only SELECT from household_status_v (security-barrier view): status,
+last proof time rounded to 5 min, escalation log during an alert.
+
+Consent:
+- Owned by Aino: one toggle per scope, all off by default.
+- The exact notice text she saw is stored as a hash.
+- Without a smartphone, consent is captured via an IVR call.
+- One-tap withdrawal.
+- Laura cannot change Aino's consents.
+The doc lists 12 open GDPR questions (Art. 9 basis, DPIA, IVR consent
+validity, US push processors, etc.).
+
+HACKATHON MVP
+Real: engine, tick, outbox, RLS, FMI weather for Turku, Expo push (needs a dev
+build; Expo Go dropped Android push), a real voice call with mock fallback,
+judge alerts via Telegram bot.
+Simulated: meter data (60-day CSV), smart plug, Datahub.
+Includes a 4-person 48-hour build plan and a cut list (Swedish strings ->
+kit engine -> real voice -> regression model).
+
+GAPS NOTICED
+1. No cancel from alerting/acknowledged on mode change. The diagram doesn't
+   say what happens if Laura switches to away mode during an active alert.
+2. The icy-day cap P90 + 15 has no P90 during cold start (< 7 days of data).
+   The declared-prior case needs its own rule.
+3. "wake" is undefined in the learned-baseline clamp once source='learned'.
+   Should fall back to declaredWakeMinute or P50.
+4. Calling an Edge Function every minute from pg_cron needs pg_net (or an
+   external scheduler). Not listed; confirm before building the tick.
+
+
+================================================================================
+2. FIRSTCAR ("My First Car" / Ensimmäinen autoni)
+================================================================================
+
+WHAT IT IS
+A purchase-safety guide for first-time used-car buyers. Persona: Aleksi, 21,
+new in Tampere, Finnish as his second language.
+- Part A (Readiness): five taps give a verdict ("28% of your take-home:
+  tight"), a monthly budget, 1-3 data-backed risk scenarios, and a savings
+  buffer tied to the deductible.
+- Part B (Purchase case, main focus): paste a car ad. The app extracts the
+  seller's claims and tracks each one in a verification ledger through
+  registry check, test drive, inspection and contract. On purchase it hands
+  off to If for mandatory motor liability insurance.
+Not a car search engine, calculator or "AI mechanic".
+
+MAIN DIFFERENCE FROM HEYMOM: DATA STAYS ON THE PHONE
+- Device (encrypted, @team/local-vault): profile, income/savings bands, cases,
+  evidence photos, seller name/phone, plate.
+- Server Postgres: only a PII-free extraction cache (30 d), rate limits
+  (24 h), funnel counters with no IDs, hand-off tokens (24 h).
+Backend is mostly stateless, with three functions:
+  extract-claims   the LLM call
+  registry-check   holds registry credentials, stores no results
+  if-handoff
+
+THE LLM: ONE JOB, NO AUTHORITY
+- Only use: claim extraction. claude-haiku-5-5, one call per unique ad,
+  temperature 0, max_tokens 1024, 15 s timeout, output forced into a JSON
+  Schema (zod ExtractionV1).
+- It cannot set a claim's status. Statuses change only through evidence,
+  registry results, inspection results or user action.
+- Grounding: every claim must carry a verbatim quote. The server drops any
+  claim whose quote isn't a substring of the ad, removing made-up and
+  injected claims.
+
+Pipeline:
+1. Device: normalise text, cap at 8k chars.
+2. Regex rule extractor gives an instant preview (plate/VIN stay on device).
+3. Device redacts phone, email, plate, VIN, likely names; sha256 hash.
+4. Server: anonymous auth + rate limits (20 ads/device/day, 2k/day global).
+5. Cache lookup on hash + schemaVersion + modelId (50 buyers, one call).
+6. On miss: injection pre-scan, Haiku call, zod validation, grounding check,
+   clamp values.
+7. Device merges LLM + rule results; disagreement becomes a finding
+   ("ad states two different mileages").
+8. If the LLM fails: rules-only results.
+
+Prompt-injection defence:
+- No tools apart from the forced output schema.
+- Ad wrapped in <ad> delimiters, marked untrusted.
+- Output rendered as plain text only.
+- Regex pre-scan + model's instructionsAddressedToAI flag set
+  injectionSuspected, shown as a red flag.
+- Even a perfectly injected claim only creates an unchecked item.
+
+VERIFICATION LEDGER (core/ledger.ts, pure functions)
+- States: unchecked -> awaiting_evidence -> verified | not_verified |
+  needs_inspection. Can flip between verified/not_verified on new evidence.
+- Evidence strength, strongest first: official (registry) > professional
+  (inspection) > document (service book, receipt) > observed (buyer saw it)
+  > seller_statement. A seller statement never verifies anything.
+- Minimum strength per claim type from the content pack, e.g. odometer needs
+  official; no_rust/no_accidents need professional (start as
+  needs_inspection).
+- A contradiction beats any confirmation. Cross-claim rules include:
+  - ad mileage lower than odometer at last inspection -> critical
+    contradiction (the demo's key moment)
+  - timing belt overdue for the model's interval
+  - owner is a finance company, or holder differs from owner
+  - scam patterns (seller abroad, deposit before viewing, courier delivery)
+- The content pack also creates items for things the ad doesn't mention
+  (e.g. belt-driven model with no belt mentioned).
+
+CASE LIFECYCLE AND GATE
+draft -> reviewing_claims -> checking -> inspecting -> contract_prep ->
+ready_to_buy -> bought -> insuring -> registered -> owned -> closed.
+The user can walk away from the middle steps.
+
+Gate into ready_to_buy:
+- Every critical item is verified, covered by a contract clause, or has an
+  explicitly accepted risk.
+- Red flags for finance owner, owner != seller, or scam pattern cannot be
+  accepted as a risk.
+- Every unverified claim the buyer relies on must appear in the contract as a
+  seller_assurance clause.
+- No readiness score by design. UI says "Ready, with 2 accepted risks".
+
+Engine: applyEvent(case, event, pack, now) -> { next, effects }, immutable
+updates, version number on the case. Seller questions (buyer's + seller's
+language), inspection plan and contract clauses are template-generated, no LLM.
+
+PART A ENGINE
+- Budget lines: insurance, energy, vehicle tax, parking, maintenance, tyres,
+  inspection, repair reserve, financing. Each shows its Provenance (default,
+  ad, registry, content, stat); registry/ad data replaces defaults.
+- Verdict: monthly cost as share of income, team heuristic thresholds
+  (15 / 25 / 35 %).
+- Risk stats computed offline: R/Python pipeline over CASdatasets (norauto
+  NO, motorins SE, optionally freMTPL2 FR) -> relativities with confidence
+  intervals only, never prices. Shipped as JSON with source and caveats.
+- Reminders are local notifications: tyres, inspection, service, renewal, tax.
+
+ADAPTERS AND PRIVACY
+- VehicleRegistryAdapter per country (Traficom, Transportstyrelsen, Vegvesen,
+  Motorstyrelsen). Each data scope labelled open_data / paid_query /
+  consent_query / partner_contract / unavailable. Demo uses traficom-mock with
+  3 plates.
+- Paid scopes run once per case, only after a "serious candidate" tap; could
+  be sponsored by If.
+- If hand-off payload is minimal (vehicle, age band, cover intent). Income,
+  savings, ledger and seller data never leave the phone.
+- Estimated running cost: about EUR 0.02-0.04 per user.
+
+GAPS NOTICED
+1. Quote highlighting doesn't line up: quoteStart is an offset into the
+   REDACTED text, but the UI highlights quotes in the raw ad. Redaction
+   changes lengths, so it needs an offset map or on-device re-matching.
+2. Case state machine holes:
+   - nothing leaves ready_to_buy if new evidence flips an item to
+     not_verified after the gate passed
+   - no walked_away from draft or reviewing_claims
+   - the "negotiate" decision has no state
+3. Rate limit is easy to get around: per device under anonymous auth, reset
+   by a reinstall. The global daily cap is what actually limits cost.
+4. Swedish "mil" (10 km) must be normalised before the odometer
+   contradiction rule runs, or Swedish ads will trigger false contradictions.
+
+
+================================================================================
+3. MOVING ("Move-In Check")
+================================================================================
+
+WHAT IT IS
+A first-week companion for If customers who move. Personas: Sara and Mikko,
+moving from a Tampere apartment to a 1979 detached house in Espoo.
+- Trigger: My If's address-change flow. App opens with the profile prefilled
+  from the policy.
+- It shows:
+  - a risk card comparing the old and new home
+  - a timeline checklist
+  - a cover check with a one-tap policy update
+  - a sealed move-in baseline (photos with a signed hash receipt)
+The baseline settles "was this damage already there?" at claim time.
+
+MAIN IDEA: BUILT ON IF'S OWN DATA
+- Core data is If's aggregated claim statistics, exported as bands only.
+- Public data limited to one flood/stormwater layer per country, behind
+  HazardLayerAdapter.
+- The team doesn't have If's data. The doc specifies the export contract; the
+  demo uses a synthetic file following it, with a "Simulated If data" badge on
+  every card.
+
+TWO-TIER RISK INDEX
+  Area    key: postcode, rolling up to municipality/region/country
+          perils: stormwater/flood, storm
+  Cohort  key: country x building type x construction decade x heating
+          perils: water leak, fire
+Burglary never gets an area score; it gets moving-day tips instead (crime
+scores by area raise stigma and discrimination concerns).
+
+Pipeline inside If (tools/synth-index runs the same code on synthetic data):
+1. 5 years of home claims mapped to the 4 perils. Theft, fraud-flagged,
+   injury and motor claims excluded.
+2. Disclosure checks: >= 50 households, >= 10 claims, >= 5 distinct buildings
+   per unit; no single event over 50% of claims. Failing units roll up.
+3. Credibility shrinkage:
+     rate* = Z*rate_unit + (1-Z)*rate_parent,  Z = exposure / (exposure + K)
+4. Banding vs national rate: < 0.80 low, 0.80-1.25 medium, > 1.25 high. A
+   unit only changes band after crossing a boundary by > 0.05 on two refreshes
+   in a row. Confidence from Z.
+5. Export a signed artifact (IndexManifest with sha256 + Ed25519), one-way
+   push into the app's Postgres.
+6. index-validator rejects artifacts with numeric rates, rows below
+   thresholds, a burglary score, or a missing signature.
+
+Risk card composition (core/riskCard.ts): each band adjusted by home
+attributes, +/-1 band, clamped. E.g. pipes renovated after 2000 = -1;
+basement = +1 for flood; sauna/fireplace = +1 for fire. A "what-if with a leak
+sensor" toggle drives the single partner offer. Low confidence shows "not
+enough data", never a guess.
+
+RULES ENGINE (@team/kits, same evaluator as HeyMom's Life Kit)
+- Kit structure: JSON with questions (generate the tap UI, with skip logic and
+  "same as before?" prefill) and rules.
+- Conditions: all/any/not/eq/in/gt/lt/ratioGt/dateBefore/truthy.
+- Rule outputs: checklist items, cover flags (each linked to an If T&C
+  clause), at most 1 offer, 1 "did you know?" line.
+- Behaviour: pure, deterministic, snapshot-tested. Keeps a trace that feeds
+  "Why am I seeing this?". Limits the checklist to 6-10 items, must-haves
+  pinned.
+- Advice separated from selling: the offer never appears in the cover check.
+- Per-country differences are data, not code: kit overlays (JSON Merge Patch)
+  plus T&C clause packs in content/terms/{CC}/{termsVersion}.json.
+
+BACKEND FUNCTIONS
+  handoff-exchange   verifies a 5-min ES256 JWT from My If against its JWKS;
+                     carries an opaque policyRef + profile fields, no policy
+                     number or personal ID
+  resolve-address    geocodes to postcode + 1 km grid cell, discards street
+  area-risk          getRiskData; 20 postcodes/day limit, no bulk API, so
+                     nobody can rebuild the index
+  cover-check        runs core + kits
+  policy-update      sends a user-confirmed PolicyPatch to If's policy API
+                     (mocked)
+  entitlement        customer / Move Pass / Premium, enforced server-side
+                     with RLS
+  baseline-receipt   signs sha256(manifest) + serverTime
+  offer-redirect, ask, kpi-rollup, health
+                     coupon attribution, clause Q&A, KPI aggregation, health
+
+BASELINE PROOF
+- Photos from the in-app camera only, GPS EXIF stripped, stay on the device.
+  Encrypted backup is opt-in.
+- A canonical JSON manifest of photo hashes + answers is hashed. Server signs
+  it with Ed25519 over (hash || serverTime || keyId) and never sees photos.
+- Honest about what it proves: photos existed no later than the seal time. It
+  does not prove the device clock was right.
+- Only the user can attach the baseline to a claim. If commits never to
+  require it.
+
+MONEY
+  If customers   free
+  Move Pass      EUR 9.90 one-time (non-customers); "If customer? Unlock
+                 free" refunds it
+  Premium        EUR 39 per property per year (landlords)
+- Payments mocked; app-store in-app-purchase rules flagged as a risk.
+- Marginal cost under EUR 1 per 1,000 users.
+- Value sketch ~EUR 0.36M/yr in Finland, mostly from keeping movers as
+  customers and fewer water claims.
+
+GAPS NOTICED
+1. The rolledUpFrom field undermines suppression. The doc says suppressed
+   units take their parent's value rather than staying blank (a blank would
+   reveal "few claims"). But rolledUpFrom marks exactly which units were
+   suppressed, and the UI shows "Based on your wider area" - both reveal the
+   same thing. Drop the field from the export, or make rollup independent of
+   claim count.
+2. Signing-key management unspecified. Receipts are kept 10 years, but no
+   word on key rotation or verifying old receipts after rotation.
+3. A heading in the checklist catalogue is garbled:
+   "(baseline photo = [camera] is not used; marked [B])".
+4. Saved risk cards don't survive long. MoveCase is purged at move date + 90
+   days, so a stored RiskCard.indexVersion is only reproducible for ~3 months
+   - roughly when the demo's claim happens.

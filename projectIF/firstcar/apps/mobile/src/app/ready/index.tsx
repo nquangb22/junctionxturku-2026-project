@@ -1,0 +1,112 @@
+import { eur, type AgeBand, type BuyerProfile, type CarSpec, type CoverIntent, type Density, type Range, type Money } from '@firstcar/core';
+import { Stack, router } from 'expo-router';
+import { useState } from 'react';
+
+import { useSession } from '@/state/session';
+import { useStore } from '@/state/store';
+import { Badge, Button, Choice, Screen, Section } from '@/ui/primitives';
+
+/** Typical first cars. Values are demo presets, labelled as such in the budget provenance. */
+const CAR_PRESETS: Record<string, CarSpec> = {
+  golf: { make: 'Volkswagen', model: 'Golf', modelYear: 2012, fuel: 'diesel', price: eur(6900), odometerKm: 180_000, hasWinterTyres: true, fieldProvenance: {} },
+  corolla: { make: 'Toyota', model: 'Corolla', modelYear: 2014, fuel: 'petrol', price: eur(8400), odometerKm: 145_000, hasWinterTyres: true, fieldProvenance: {} },
+  yaris: { make: 'Toyota', model: 'Yaris Hybrid', modelYear: 2018, fuel: 'hybrid', price: eur(12500), odometerKm: 90_000, hasWinterTyres: false, fieldProvenance: {} },
+};
+
+const INCOME: Record<string, Range<Money> | undefined> = {
+  '<1500': { low: eur(1000), high: eur(1500) },
+  '1500–2000': { low: eur(1500), high: eur(2000) },
+  '2000–2500': { low: eur(2000), high: eur(2500) },
+  '2500–3500': { low: eur(2500), high: eur(3500) },
+  '3500+': { low: eur(3500), high: eur(5000) },
+  skip: undefined,
+};
+
+const SAVINGS: Record<string, Range<Money> | undefined> = {
+  '<500': { low: eur(0), high: eur(500) },
+  '500–1500': { low: eur(500), high: eur(1500) },
+  '1500–3000': { low: eur(1500), high: eur(3000) },
+  '3000+': { low: eur(3000), high: eur(6000) },
+  skip: undefined,
+};
+
+const bandKey = (table: Record<string, Range<Money> | undefined>, value?: Range<Money>) =>
+  Object.entries(table).find(([, v]) => v && value && v.low.minor === value.low.minor)?.[0] ?? (value ? undefined : 'skip');
+
+export default function ReadyInputs() {
+  const { t, prefs } = useSession();
+  const { data, patch } = useStore();
+  const prev = data.profile;
+
+  const [car, setCar] = useState<string | undefined>(Object.entries(CAR_PRESETS).find(([, c]) => c.model === data.readinessCar?.model)?.[0]);
+  const [density, setDensity] = useState<Density | undefined>(prev?.density);
+  const [age, setAge] = useState<AgeBand | undefined>(prev?.ageBand);
+  const [firstTime, setFirstTime] = useState<boolean | undefined>(prev?.firstTimeDriver);
+  const [income, setIncome] = useState<string | undefined>(prev ? bandKey(INCOME, prev.netMonthlyIncome) : undefined);
+  const [savings, setSavings] = useState<string | undefined>(prev ? bandKey(SAVINGS, prev.savings) : undefined);
+  const [cover, setCover] = useState<CoverIntent>(prev?.coverIntent ?? 'liability_plus_partial');
+  const [deductible, setDeductible] = useState<number>(prev ? prev.deductible.minor / 100 : 300);
+
+  const complete = car && density && age && firstTime !== undefined && income && savings;
+
+  const calculate = () => {
+    if (!complete) return;
+    const profile: BuyerProfile = {
+      country: 'FI',
+      locale: prefs.locale,
+      density,
+      ageBand: age,
+      firstTimeDriver: firstTime,
+      netMonthlyIncome: INCOME[income],
+      savings: SAVINGS[savings],
+      coverIntent: cover,
+      deductible: eur(deductible),
+    };
+    patch({ profile, readinessCar: CAR_PRESETS[car] });
+    router.replace('/ready/result');
+  };
+
+  const bands = (table: Record<string, unknown>) => Object.keys(table).map((k) => ({ value: k, label: k === 'skip' ? t('common.skip') : `${k} €` }));
+
+  return (
+    <Screen footer={<Button label={t('ready.calculate')} onPress={calculate} disabled={!complete} />}>
+      <Stack.Screen options={{ title: t('ready.title') }} />
+      <Badge tone="success" icon="🔒" label={t('ready.privacy')} />
+
+      <Section title={t('ready.car')}>
+        <Choice
+          label={t('ready.car')}
+          value={car}
+          onChange={setCar}
+          options={Object.entries(CAR_PRESETS).map(([k, c]) => ({ value: k, label: `${c.make === 'Volkswagen' ? 'VW' : c.make} ${c.model} ${c.modelYear} · ${(c.price!.minor / 100).toLocaleString('fi-FI')} €` }))}
+        />
+      </Section>
+      <Section title={t('ready.region')}>
+        <Choice label={t('ready.region')} value={density} onChange={setDensity} options={(['urban', 'suburban', 'rural'] as const).map((d) => ({ value: d, label: t(`density.${d}`) }))} />
+      </Section>
+      <Section title={t('ready.age')}>
+        <Choice label={t('ready.age')} value={age} onChange={setAge} options={(['18-19', '20-25', '26-34', '35+'] as const).map((a) => ({ value: a, label: a }))} />
+      </Section>
+      <Section title={t('ready.firstTime')}>
+        <Choice label={t('ready.firstTime')} value={firstTime} onChange={setFirstTime} options={[{ value: true, label: t('common.yes') }, { value: false, label: t('common.no') }]} />
+      </Section>
+      <Section title={t('ready.income')}>
+        <Choice label={t('ready.income')} value={income} onChange={setIncome} options={bands(INCOME)} />
+      </Section>
+      <Section title={t('ready.savings')}>
+        <Choice label={t('ready.savings')} value={savings} onChange={setSavings} options={bands(SAVINGS)} />
+      </Section>
+      <Section title={t('ready.cover')}>
+        <Choice
+          label={t('ready.cover')}
+          value={cover}
+          onChange={setCover}
+          options={(['liability_only', 'liability_plus_partial', 'liability_plus_comprehensive'] as const).map((c) => ({ value: c, label: t(`cover.${c}`) }))}
+        />
+      </Section>
+      <Section title={t('ready.deductible')}>
+        <Choice label={t('ready.deductible')} value={deductible} onChange={setDeductible} options={[150, 300, 500].map((d) => ({ value: d, label: `${d} €` }))} />
+      </Section>
+    </Screen>
+  );
+}

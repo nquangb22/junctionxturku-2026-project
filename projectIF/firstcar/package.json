@@ -1,0 +1,13 @@
+{
+  "name": "firstcar",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspace @firstcar/core",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "start": "npm run start --workspace mobile"
+  }
+}
