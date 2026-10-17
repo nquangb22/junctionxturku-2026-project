@@ -26,6 +26,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { IconLine } from '@/ui/icon';
+import { ClaimPhoto, itemPhoto } from '@/ui/photos';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { confirmAction } from '@/ui/dialog';
 import { QuoteTranslation, StatusPill } from '@/ui/status';
@@ -52,6 +53,7 @@ export default function ItemDetail() {
   const blocking = hasBlockingFlag(item);
   const run = (err: string | undefined) => setError(err ? t('common.error', { error: err }) : undefined);
   const gap = claim?.type === 'odometer' ? mileageGap(c, new Date()) : undefined;
+  const photo = itemPhoto(item.origin, c.listing.car);
 
   const accept = () => run(caseEvent(c.id, { type: 'risk_accepted', itemId: item.id }));
   // A critical risk is accepted only after the buyer has seen what was found.
@@ -79,6 +81,7 @@ export default function ItemDetail() {
   return (
     <Screen>
       <Stack.Screen options={{ title: itemTitle(item, prefs.locale) }} />
+      {photo ? <ClaimPhoto source={photo} t={t} /> : null}
       <View style={styles.badges}>
         <StatusPill status={item.status} t={t} />
         {isMandatoryItem(item) ? <Badge tone="info" label={t('ledger.mandatory')} /> : null}

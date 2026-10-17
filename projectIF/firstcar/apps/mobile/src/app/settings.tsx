@@ -4,6 +4,7 @@ import { Platform, Share } from 'react-native';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { confirmAction, notify } from '@/ui/dialog';
+import { photoCredits } from '@/ui/photos';
 import { Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Settings() {
@@ -72,6 +73,17 @@ export default function Settings() {
         <Button kind="secondary" label={t('settings.export')} onPress={() => void exportData()} />
         <Button kind="danger" label={t('settings.deleteAll')} onPress={confirmWipe} />
       </Section>
+      <Section title={t('settings.credits')}>
+        <Txt variant="caption">{t('settings.creditsHint')}</Txt>
+        <Card>
+          {photoCredits(t).map((c) => (
+            <Txt key={c.what} variant="caption">
+              {`${c.what}: ${c.author}, ${c.license}`}
+            </Txt>
+          ))}
+        </Card>
+      </Section>
+
       <Section title={t('settings.demo')}>
         <Txt variant="caption">{t('settings.demoHint')}</Txt>
         <Txt variant="small">{t('settings.llmMock')}</Txt>

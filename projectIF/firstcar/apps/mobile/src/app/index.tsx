@@ -9,6 +9,7 @@ import { useStore } from '@/state/store';
 import { Badge, Button, Hero, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 import { caseCounts, caseTitle } from '@/ui/case-helpers';
 import { confirmAction } from '@/ui/dialog';
+import { carFront, DemoAdCards, HeroPhoto, PhotoThumb } from '@/ui/photos';
 
 const OWNED = new Set(['owned', 'registered']);
 
@@ -36,7 +37,7 @@ export default function Home() {
   return (
     <Screen>
       <Stack.Screen options={{ title: t('appName'), headerRight: () => <Button kind="ghost" label={t('home.settings')} onPress={() => router.push('/settings')} /> }} />
-      <Hero icon="car" title={t('home.tagline')}>
+      <Hero icon="car" title={t('home.tagline')} image={<HeroPhoto t={t} />}>
         {Platform.OS === 'web' ? <Badge tone="warning" icon="warning" label={t('home.privacyWeb')} /> : <Badge tone="success" icon="lock" label={t('home.privacy')} />}
       </Hero>
 
@@ -47,6 +48,11 @@ export default function Home() {
         onPress={() => router.push(verdict ? '/ready/result' : '/ready')}
         right={verdict ? <Badge tone={VERDICT_TONE[verdict.level]} label={t(`verdict.${verdict.level}`)} /> : undefined}
       />
+
+      <Section title={t('home.demoTitle')}>
+        <Txt variant="small">{t('home.demoBody')}</Txt>
+        <DemoAdCards t={t} layout="row" onPick={(demo) => router.push({ pathname: '/cases/new', params: { demo } })} />
+      </Section>
 
       <Section title={t('home.casesTitle')}>
         {active.length === 0 ? <Txt variant="small">{t('home.noCases')}</Txt> : null}
@@ -89,6 +95,7 @@ function CaseCard({ c }: { c: PurchaseCase }) {
   const counts = caseCounts(c);
   const tone: StatusTone = counts.problems > 0 ? 'danger' : c.status === 'ready_to_buy' ? 'success' : c.status === 'walked_away' ? 'neutral' : 'info';
   const firstProblem = c.items.find((i) => i.status === 'not_verified');
+  const photo = carFront(c.listing.car);
   const problemLabel =
     firstProblem?.origin.kind === 'claim' ? CLAIM_TITLES[firstProblem.origin.claimType][prefs.locale] : undefined;
   return (
@@ -98,6 +105,7 @@ function CaseCard({ c }: { c: PurchaseCase }) {
         .filter(Boolean)
         .join(' · ')}
       tone={tone}
+      leading={photo ? <PhotoThumb source={photo} /> : undefined}
       onPress={() => router.push({ pathname: '/cases/[id]', params: { id: c.id } })}
     />
   );

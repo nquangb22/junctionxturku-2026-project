@@ -1,3 +1,5 @@
+import { lockoutRemainingMs } from '@firstcar/core';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
@@ -13,7 +15,7 @@ export type VaultFailure = 'key_lost' | 'corrupt' | 'error';
 const FAILURE_TEXT: Record<VaultFailure, MessageKey> = { key_lost: 'lock.keyLost', corrupt: 'lock.corrupt', error: 'lock.loadError' };
 
 type Props =
-  | { t: Translate; onUnlock: () => void; error?: string; overlay?: boolean; failure?: undefined }
+  | { t: Translate; onUnlock: () => void; error?: string; overlay?: boolean; bannedUntil: number | null; lastSeen: number; failure?: undefined }
   | { t: Translate; failure: VaultFailure; onRetry: () => void; onReset: () => void };
 
 /** Opaque cover shown the moment the app is inactive, so the OS app switcher never captures content. */
@@ -27,9 +29,32 @@ export function PrivacyCover() {
 }
 
 /** Full-screen lock. As an overlay it hides everything underneath (relock after background). */
+/** "m:ss" (or "h:mm:ss") for the wait shown on the lock screen. */
+function formatWait(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
+/** Milliseconds left on an unlock ban, ticking every second until it ends. */
+function useBanRemaining(bannedUntil: number | null, lastSeen: number): number {
+  const [now, setNow] = useState(() => Date.now());
+  const remaining = lockoutRemainingMs({ failures: 0, bannedUntil, lastSeen }, now);
+  const active = remaining > 0;
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return remaining;
+}
+
 export function LockScreen(props: Props) {
   const p = usePalette();
   const { t } = props;
+  const banned = useBanRemaining(props.failure ? null : props.bannedUntil, props.failure ? 0 : props.lastSeen);
   return (
     <View style={[styles.root, { backgroundColor: p.background }, !props.failure && props.overlay ? StyleSheet.absoluteFill : null]} accessibilityViewIsModal>
       <View style={styles.inner}>
@@ -54,12 +79,21 @@ export function LockScreen(props: Props) {
         ) : (
           <>
             <Txt style={styles.center}>{t('lock.body')}</Txt>
-            {props.error ? (
+            {banned > 0 ? (
+              <View style={[styles.ban, { backgroundColor: p.dangerBg }]} accessibilityLiveRegion="polite">
+                <Txt variant="bodyStrong" color={p.danger} style={styles.center}>
+                  {t('lock.banned', { time: formatWait(banned) })}
+                </Txt>
+                <Txt variant="small" color={p.danger} style={styles.center}>
+                  {t('lock.bannedHint')}
+                </Txt>
+              </View>
+            ) : props.error ? (
               <Txt color={p.danger} style={styles.center} accessibilityLiveRegion="polite">
                 {props.error}
               </Txt>
             ) : null}
-            <Button label={t('lock.unlock')} onPress={props.onUnlock} />
+            <Button label={banned > 0 ? t('lock.bannedButton', { time: formatWait(banned) }) : t('lock.unlock')} onPress={props.onUnlock} disabled={banned > 0} />
           </>
         )}
       </View>
@@ -72,4 +106,5 @@ const styles = StyleSheet.create({
   inner: { width: '100%', maxWidth: 420, gap: Spacing.lg },
   icon: { alignItems: 'center' },
   center: { textAlign: 'center' },
+  ban: { borderRadius: 12, padding: Spacing.lg, gap: Spacing.xs },
 });

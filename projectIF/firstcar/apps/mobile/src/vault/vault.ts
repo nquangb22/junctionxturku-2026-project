@@ -5,7 +5,7 @@
  *   The app only reads it after a successful biometric/passcode check (see lock.ts).
  * - Web (demo only): falls back to unencrypted localStorage, clearly not for real data.
  */
-import type { Locale } from '@firstcar/core';
+import { parseLockout, type LockoutState, type Locale } from '@firstcar/core';
 import { AESEncryptionKey, AESSealedData, aesDecryptAsync, aesEncryptAsync } from 'expo-crypto';
 import { File, Paths } from 'expo-file-system';
 import * as SecureStore from 'expo-secure-store';
@@ -15,6 +15,7 @@ import { utf8Decode, utf8Encode } from './utf8';
 
 const KEY_NAME = 'fc.vaultKey';
 const PREFS_NAME = 'fc.prefs';
+const LOCKOUT_NAME = 'fc.lockout';
 const VAULT_FILE = 'firstcar-vault.bin';
 const BACKUP_FILE = 'firstcar-vault.bak';
 const TEMP_FILE = 'firstcar-vault.tmp';
@@ -54,6 +55,23 @@ export async function savePrefs(prefs: VaultPrefs): Promise<void> {
   const raw = JSON.stringify(prefs);
   if (isWeb) globalThis.localStorage?.setItem(PREFS_NAME, raw);
   else await SecureStore.setItemAsync(PREFS_NAME, raw, secureOpts);
+}
+
+/* ---------- unlock lockout (kept across restarts and "delete everything") ---------- */
+
+export async function loadLockout(): Promise<LockoutState> {
+  try {
+    const raw = isWeb ? globalThis.localStorage?.getItem(LOCKOUT_NAME) : await SecureStore.getItemAsync(LOCKOUT_NAME, secureOpts);
+    return parseLockout(raw ? JSON.parse(raw) : null);
+  } catch {
+    return parseLockout(null);
+  }
+}
+
+export async function saveLockout(state: LockoutState): Promise<void> {
+  const raw = JSON.stringify(state);
+  if (isWeb) globalThis.localStorage?.setItem(LOCKOUT_NAME, raw);
+  else await SecureStore.setItemAsync(LOCKOUT_NAME, raw, secureOpts);
 }
 
 /* ---------- key ---------- */

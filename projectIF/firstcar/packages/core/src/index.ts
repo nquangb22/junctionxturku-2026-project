@@ -13,4 +13,5 @@ export * from './case';
 export * from './budget';
 export * from './scenarios';
 export * from './reminders';
+export * from './lockout';
 export * from './fixtures';

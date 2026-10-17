@@ -1,7 +1,7 @@
 import { DEMO_ADS, MAX_AD_CHARS, createCase } from '@firstcar/core';
 import * as Clipboard from 'expo-clipboard';
 import { randomUUID } from 'expo-crypto';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
@@ -12,14 +12,18 @@ import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { notify } from '@/ui/dialog';
 import { IconLine } from '@/ui/icon';
-import { Button, Choice, Screen, Section, Txt } from '@/ui/primitives';
+import { DemoAdCards } from '@/ui/photos';
+import { Button, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function NewCase() {
   const { t } = useSession();
   const { data, addCase } = useStore();
   const p = usePalette();
-  const [text, setText] = useState('');
-  const [demoId, setDemoId] = useState<string | undefined>();
+  // Home's example-ad cards open this screen with ?demo=<id> already picked.
+  const { demo } = useLocalSearchParams<{ demo?: string }>();
+  const initialDemo = DEMO_ADS.find((a) => a.id === demo);
+  const [text, setText] = useState(initialDemo?.text ?? '');
+  const [demoId, setDemoId] = useState<string | undefined>(initialDemo?.id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -82,7 +86,7 @@ export default function NewCase() {
       ) : null}
       <IconLine icon="lock" variant="caption">{t('new.redactNote')}</IconLine>
       <Section title={t('new.demo')}>
-        <Choice label={t('new.demo')} value={demoId} onChange={pickDemo} options={DEMO_ADS.map((a) => ({ value: a.id, label: a.label }))} />
+        <DemoAdCards t={t} layout="grid" selected={demoId} onPick={pickDemo} />
       </Section>
     </Screen>
   );

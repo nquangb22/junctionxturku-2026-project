@@ -407,6 +407,22 @@ export const en = {
   'settings.llmMockHint': 'Uses prepared AI answers for the demo ads instead of calling an AI service.',
   'settings.skipLockHint': 'Opens the app without Face ID or fingerprint while presenting.',
   'item.evidenceNote': 'What did you see, or what does the document say?',
+  'photo.heroAlt': 'Cars parked by a road in Lapland in autumn',
+  'settings.credits': 'Photo credits',
+  'settings.creditsHint': 'Real photos from Wikimedia Commons, used under their Creative Commons licences.',
+  'photo.heroName': 'Main page: Lapland road',
+  'photo.front': 'front',
+  'photo.rear': 'back',
+  'photo.interior': 'inside',
+  'photo.exampleTag': 'Example photo',
+  'photo.galleryLabel': 'Example photos of a {model}: front, back and inside. Not the car in this ad.',
+  'home.demoTitle': 'Try an example ad',
+  'home.demoBody': 'Pick a car to see how FirstCar checks an ad.',
+  'lock.attemptsLeft.one': 'Could not unlock. 1 attempt left before FirstCar locks for a while.',
+  'lock.attemptsLeft.other': 'Could not unlock. {n} attempts left before FirstCar locks for a while.',
+  'lock.banned': 'Too many failed attempts. Try again in {time}.',
+  'lock.bannedHint': 'Each further failed attempt makes the wait longer.',
+  'lock.bannedButton': 'Locked · {time}',
 } as const;
 
 export type MessageKey = keyof typeof en;

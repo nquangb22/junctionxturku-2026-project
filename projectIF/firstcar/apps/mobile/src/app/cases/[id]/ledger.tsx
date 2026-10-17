@@ -1,6 +1,6 @@
 import { isMandatoryItem, isStale, itemTitle, type VerificationItem, type VerificationStatus } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
-import { View } from 'react-native';
+import { View, type ImageSourcePropType } from 'react-native';
 
 import { Spacing, type StatusTone } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
@@ -8,6 +8,7 @@ import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase } from '@/state/store';
 import { IconLine, type IconName } from '@/ui/icon';
+import { itemPhoto, PhotoThumb } from '@/ui/photos';
 import { Badge, NavCard, Screen } from '@/ui/primitives';
 import { StatusPill } from '@/ui/status';
 
@@ -32,11 +33,16 @@ export default function Ledger() {
           accessibilityLabel={[itemTitle(item, prefs.locale), t(`status.${item.status}`), ...extraBadges(item, t).map((b) => b.label)].join('. ')}
           tone={item.status === 'not_verified' ? 'danger' : undefined}
           onPress={() => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId: item.id } })}
-          right={<ItemBadges item={item} />}
+          below={<ItemBadges item={item} />}
+          leading={thumbFor(itemPhoto(item.origin, c.listing.car))}
         />
       ))}
     </Screen>
   );
+}
+
+function thumbFor(source: ImageSourcePropType | undefined) {
+  return source ? <PhotoThumb source={source} small /> : undefined;
 }
 
 type ExtraBadge = { tone: StatusTone; label: string; icon?: IconName };
@@ -54,7 +60,7 @@ function extraBadges(item: VerificationItem, t: Translate): ExtraBadge[] {
 function ItemBadges({ item }: { item: VerificationItem }) {
   const { t } = useSession();
   return (
-    <View style={{ alignItems: 'flex-end', gap: Spacing.xs }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
       <StatusPill status={item.status} t={t} />
       {extraBadges(item, t).map((b) => (
         <Badge key={b.label} tone={b.tone} icon={b.icon} label={b.label} />

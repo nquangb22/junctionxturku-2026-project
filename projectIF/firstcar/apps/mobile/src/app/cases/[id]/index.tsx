@@ -8,6 +8,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { caseCounts, caseTitle } from '@/ui/case-helpers';
 import { confirmAction, notify } from '@/ui/dialog';
+import { CarGallery } from '@/ui/photos';
 import { Badge, Button, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 
 type StepKey = 'claims' | 'registry' | 'ledger' | 'inspection' | 'contract' | 'decide' | 'insure';
@@ -100,6 +101,7 @@ export default function CaseOverview() {
   return (
     <Screen>
       <Stack.Screen options={{ title: caseTitle(c) }} />
+      <CarGallery car={c.listing.car} t={t} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
         <Badge tone={c.status === 'walked_away' ? 'neutral' : 'info'} label={t(`caseStatus.${c.status}`)} />
         {confirmed ? <Badge tone={counts.problems ? 'danger' : 'neutral'} label={t('case.summary', counts)} /> : null}

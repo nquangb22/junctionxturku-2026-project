@@ -2,7 +2,8 @@ import { CONTRACT_DISCLAIMER, REQUIRED_CLAUSES, contractFieldValues, contractTex
 import { Redirect, Stack, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Platform, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Share, StyleSheet, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
@@ -11,6 +12,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { notify } from '@/ui/dialog';
 import { Icon, IconLine } from '@/ui/icon';
+import { ICON_IN, PressableScale, tick } from '@/ui/motion';
 import { Badge, Button, Card, Screen, Txt } from '@/ui/primitives';
 
 const EDITABLE_STATUSES = new Set(['checking', 'inspecting', 'contract_prep', 'ready_to_buy']);
@@ -63,10 +65,14 @@ export default function Contract() {
       {c.clauses.map((cl) => {
         const required = REQUIRED_CLAUSES.has(cl.kind);
         return (
-          <Pressable
+          <PressableScale
+            scaleTo={0.98}
             key={cl.id}
             disabled={!editable || required}
-            onPress={() => caseEvent(c.id, { type: 'clause_toggled', clauseId: cl.id })}
+            onPress={() => {
+              tick();
+              caseEvent(c.id, { type: 'clause_toggled', clauseId: cl.id });
+            }}
             accessibilityRole={required ? 'text' : 'checkbox'}
             accessibilityState={required ? undefined : { checked: cl.included, disabled: !editable }}
             aria-checked={required ? undefined : cl.included}
@@ -75,13 +81,15 @@ export default function Contract() {
               {required ? (
                 <Badge tone="neutral" label={t('contract.required')} />
               ) : (
-                <Icon name={cl.included ? 'checkbox' : 'checkboxEmpty'} size={26} color={cl.included ? p.primary : p.textSecondary} />
+                <Animated.View key={cl.included ? 'on' : 'off'} entering={ICON_IN}>
+                  <Icon name={cl.included ? 'checkbox' : 'checkboxEmpty'} size={26} color={cl.included ? p.primary : p.textSecondary} />
+                </Animated.View>
               )}
               {cl.kind === 'seller_assurance' ? <Badge tone="warning" label={t('contract.assurance')} /> : null}
               {cl.kind === 'disputed_claim' ? <Badge tone="danger" label={t('contract.disputed')} /> : null}
             </View>
             <Txt style={{ opacity: cl.included ? 1 : 0.5 }}>{cl.text}</Txt>
-          </Pressable>
+          </PressableScale>
         );
       })}
       <Txt variant="caption">{CONTRACT_DISCLAIMER[prefs.locale]}</Txt>

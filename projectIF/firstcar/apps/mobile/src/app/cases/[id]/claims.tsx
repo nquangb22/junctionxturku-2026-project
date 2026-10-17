@@ -1,7 +1,7 @@
 import { CLAIM_TITLES, MANDATORY_CLAIM_TYPES, quoteTranslationFor, type ClaimType, type ClaimValue, type SellerClaim } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, type ImageSourcePropType } from 'react-native';
 
 import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
@@ -11,6 +11,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { describeValue } from '@/ui/case-helpers';
 import { IconLine } from '@/ui/icon';
+import { ClaimPhoto, claimPhoto, PhotoThumb } from '@/ui/photos';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { QuoteHighlight, QuoteTranslation, StatusPill } from '@/ui/status';
 
@@ -128,6 +129,7 @@ export default function ClaimsReview() {
             claim={cl}
             t={t}
             locale={prefs.locale}
+            photo={claimPhoto(cl.type, c.listing.car)}
             focused={focus === cl.id}
             onFocus={() => setFocus(cl.id)}
             onRemove={editable ? () => remove(cl) : undefined}
@@ -209,6 +211,7 @@ function ClaimRow({
   claim,
   t,
   locale,
+  photo,
   focused,
   onFocus,
   onRemove,
@@ -217,6 +220,7 @@ function ClaimRow({
   claim: SellerClaim;
   t: Translate;
   locale: 'en' | 'fi';
+  photo?: ImageSourcePropType;
   focused: boolean;
   onFocus: () => void;
   onRemove?: () => void;
@@ -244,12 +248,18 @@ function ClaimRow({
   return (
     <Card tone={focused ? 'info' : undefined}>
       <View style={styles.row}>
-        <Pressable accessibilityRole="button" onPress={onFocus} style={styles.claim}>
-          <Txt variant="bodyStrong">{isOther ? claimTitle(claim, locale) : `${CLAIM_TITLES[claim.type][locale]}: ${describeValue(claim.value, t)}`}</Txt>
-        </Pressable>
-        {MANDATORY_CLAIM_TYPES.has(claim.type) ? <Badge tone="info" label={t('ledger.mandatory')} /> : null}
-        <StatusPill status="unchecked" t={t} />
+        {photo && !focused ? <PhotoThumb source={photo} /> : null}
+        <View style={styles.claim}>
+          <Pressable accessibilityRole="button" onPress={onFocus} style={styles.claimTitle}>
+            <Txt variant="bodyStrong">{isOther ? claimTitle(claim, locale) : `${CLAIM_TITLES[claim.type][locale]}: ${describeValue(claim.value, t)}`}</Txt>
+          </Pressable>
+          <View style={styles.badges}>
+            <StatusPill status="unchecked" t={t} />
+            {MANDATORY_CLAIM_TYPES.has(claim.type) ? <Badge tone="info" label={t('ledger.mandatory')} /> : null}
+          </View>
+        </View>
       </View>
+      {photo && focused ? <ClaimPhoto source={photo} t={t} /> : null}
       {editing ? (
         <>
           {editableValue !== undefined && !isOther ? (
@@ -294,9 +304,10 @@ function ClaimRow({
 }
 
 const styles = StyleSheet.create({
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  claim: { flex: 1, minHeight: 48, justifyContent: 'center' },
+  claim: { flex: 1, minWidth: 0, gap: Spacing.xs },
+  claimTitle: { minHeight: 44, justifyContent: 'center' },
   input: { fontFamily: Fonts.regular, minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
 });
