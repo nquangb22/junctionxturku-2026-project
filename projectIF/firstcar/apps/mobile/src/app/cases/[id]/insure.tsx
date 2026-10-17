@@ -12,6 +12,15 @@ import { InsuredCard } from '@/ui/insured-card';
 import { Button, Card, Choice, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
 
+/**
+ * The purchase steps are finished, so they leave the history: back from My Car goes straight Home.
+ * dismissTo('/') pops to Home, or replaces this screen with Home when there is no history (web reload).
+ */
+function openMyCar() {
+  router.dismissTo('/');
+  router.push('/own');
+}
+
 export default function Insure() {
   const c = useCase(useCaseId());
   const { t, prefs } = useSession();
@@ -74,7 +83,7 @@ export default function Insure() {
   const own = () => {
     const err = caseEvent(c.id, { type: 'take_ownership' });
     if (err) setError(t('common.error', { error: err }));
-    else router.replace('/own');
+    else openMyCar();
   };
 
   return (
@@ -150,7 +159,7 @@ export default function Insure() {
       {c.status === 'registered' || c.status === 'owned' ? (
         <Card tone="success">
           <Txt variant="bodyStrong">✓ {t('insure.done')}</Txt>
-          {c.status === 'registered' ? <Button label={t('insure.toOwn')} onPress={own} /> : <Button label={t('insure.toOwn')} onPress={() => router.replace('/own')} />}
+          {c.status === 'registered' ? <Button label={t('insure.toOwn')} onPress={own} /> : <Button label={t('insure.toOwn')} onPress={openMyCar} />}
         </Card>
       ) : null}
     </Screen>
