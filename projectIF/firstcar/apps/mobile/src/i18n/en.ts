@@ -230,7 +230,6 @@ export const en = {
   'insp.notRecommended': 'Not required here, but always a good idea.',
   'insp.focus': 'Ask the inspector to check:',
   'insp.partner': 'Book an inspection (demo partner)',
-  'insp.partnerBooked': 'Demo booking made. In the real app this opens the partner’s booking page.',
   'insp.result': 'Inspection result',
   'insp.save': 'Save inspection result',
 
@@ -333,6 +332,23 @@ export const en = {
   'decide.dueBudget': 'Counted in the {amount} / month above.',
   'decide.unchecked.one': '1 non-critical item is still unchecked',
   'decide.unchecked.other': '{n} non-critical items are still unchecked',
+  'insp.answered': '{n} of {total} answered',
+  'insp.editAnswers': 'Edit answers',
+  'insp.saveAnswers': 'Save answers',
+  'insp.update': 'Update inspection result',
+  'insp.saved': 'Saved. OK: {ok} · Issue: {issue}',
+  'insp.bookPartner': 'Partner',
+  'insp.bookDate': 'Day',
+  'insp.bookRequest': 'Request booking',
+  'insp.booked': 'Booked for {date} · {partner}',
+  'insp.bookSent': 'Demo: booking request sent. The partner will call you.',
+  'case.inProgress': 'In progress',
+  'case.itemsExplain': '{claims} claims + {checks} mandatory checks',
+  'home.pastTitle': 'Past cars',
+  'home.showPast': 'Show past cars ({n})',
+  'home.hidePast': 'Hide past cars',
+  'contract.copied': 'Copied to clipboard',
+  'contract.download': 'Download as .txt',
 } as const;
 
 export type MessageKey = keyof typeof en;

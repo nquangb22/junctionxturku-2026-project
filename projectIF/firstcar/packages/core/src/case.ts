@@ -24,6 +24,7 @@ import type {
   Evidence,
   EvidenceFact,
   EvidenceKind,
+  ISO,
   Locale,
   Money,
   PurchaseCase,
@@ -46,7 +47,8 @@ export type CaseEvent =
   | { type: 'risk_accepted'; itemId: string }
   | { type: 'risk_unaccepted'; itemId: string }
   | { type: 'start_inspection' }
-  | { type: 'test_drive_done' }
+  | { type: 'test_drive_done'; answers?: Record<string, 'ok' | 'issue'> }
+  | { type: 'inspection_booked'; partner: string; date: ISO }
   | { type: 'inspection_result'; outcomes: Record<string, 'ok' | 'issue'> }
   | { type: 'inspection_skipped' }
   | { type: 'start_contract' }
@@ -263,13 +265,19 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
 
     case 'test_drive_done':
       if (!ledgerOpen) return fail('ledger_closed');
-      return bump(c, { ...c, testDriveDone: true }, ctx);
+      return bump(c, { ...c, testDriveDone: true, testDriveAnswers: e.answers ?? c.testDriveAnswers }, ctx);
+
+    case 'inspection_booked':
+      if (!ledgerOpen) return fail('ledger_closed');
+      if (!e.partner.trim() || Number.isNaN(Date.parse(e.date))) return fail('invalid_booking');
+      return bump(c, { ...c, inspectionBooking: { partner: e.partner.trim(), date: e.date } }, ctx);
 
     case 'inspection_result': {
       if (!ledgerOpen) return fail('ledger_closed');
       const entries = Object.entries(e.outcomes).filter(([itemId]) => c.items.some((i) => i.id === itemId)).filter(([, outcome]) => outcome === 'ok' || outcome === 'issue');
       if (entries.length === 0) return fail('no_outcomes');
-      let acc = c;
+      // An updated result replaces the earlier report for the same item instead of stacking on it.
+      let acc: PurchaseCase = { ...c, evidence: c.evidence.filter((ev) => !(ev.kind === 'inspection_report' && ev.itemIds.length === 1 && entries.some(([id]) => id === ev.itemIds[0]))) };
       for (const [itemId, outcome] of entries) {
         acc = { ...acc, evidence: [...acc.evidence, makeEvidence(acc, { kind: 'inspection_report', itemIds: [itemId], outcome: outcome === 'ok' ? 'supports' : 'contradicts' }, ctx.now)] };
       }

@@ -380,6 +380,10 @@ export interface PurchaseCase {
   inspectionDone: boolean;
   /** The buyer chose to go on without a pre-purchase inspection; inspectable items stay open. */
   inspectionSkipped?: boolean;
+  /** Last saved test-drive checklist answers, by checklist item id. */
+  testDriveAnswers?: Record<string, 'ok' | 'issue'>;
+  /** Demo partner booking for the pre-purchase inspection. */
+  inspectionBooking?: { partner: string; date: ISO };
   clauses: ContractClause[];
   /** Last include/exclude choice per assurance clause id, kept while the clause is absent (item verified). */
   assuranceChoices?: Record<string, boolean>;

@@ -1,6 +1,7 @@
 import { CONTRACT_DISCLAIMER, contractText } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
-import { Pressable, Share, StyleSheet, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
@@ -20,12 +21,31 @@ export default function Contract() {
   if (!c) return <Redirect href="/" />;
   const editable = EDITABLE_STATUSES.has(c.status);
 
+  const text = contractText(c.clauses, t('contract.docTitle'), CONTRACT_DISCLAIMER[prefs.locale]);
+  const isWeb = Platform.OS === 'web';
+
+  // Web without navigator.share (most desktop browsers): copy instead, so the tap always does something visible.
   const share = async () => {
     try {
-      await Share.share({ message: contractText(c.clauses, t('contract.docTitle'), CONTRACT_DISCLAIMER[prefs.locale]) });
+      if (isWeb && !globalThis.navigator?.share) {
+        await Clipboard.setStringAsync(text);
+        notify(t('contract.copied'));
+        return;
+      }
+      await Share.share({ message: text });
     } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return; // the user closed the share sheet
       notify(t('common.error', { error: e instanceof Error ? e.message : String(e) }));
     }
+  };
+
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${t('contract.docTitle')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -44,6 +64,7 @@ export default function Contract() {
           onPress={() => caseEvent(c.id, { type: 'clause_toggled', clauseId: cl.id })}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: cl.included, disabled: !editable }}
+          aria-checked={cl.included}
           style={[styles.clause, { borderColor: cl.kind === 'disputed_claim' ? p.danger : cl.kind === 'seller_assurance' ? p.warning : p.border, backgroundColor: cl.included ? p.surface : p.surfaceAlt }]}>
           <View style={styles.head}>
             <Txt variant="h2" importantForAccessibility="no">
@@ -57,6 +78,7 @@ export default function Contract() {
       ))}
       <Txt variant="caption">{CONTRACT_DISCLAIMER[prefs.locale]}</Txt>
       <Button kind="secondary" label={t('contract.share')} onPress={share} />
+      {isWeb ? <Button kind="ghost" label={t('contract.download')} onPress={download} /> : null}
     </Screen>
   );
 }

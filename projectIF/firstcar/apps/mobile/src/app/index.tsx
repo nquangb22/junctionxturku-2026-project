@@ -1,22 +1,35 @@
 import { CLAIM_TITLES, computeBudget, type PurchaseCase } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
-import { Platform } from 'react-native';
+import { useState } from 'react';
+import { Platform, View } from 'react-native';
 
-import { VERDICT_TONE, type StatusTone } from '@/constants/theme';
+import { Spacing, VERDICT_TONE, type StatusTone } from '@/constants/theme';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { Badge, Button, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 import { caseCounts, caseTitle } from '@/ui/case-helpers';
+import { confirmAction } from '@/ui/dialog';
 
 const OWNED = new Set(['owned', 'registered']);
 
 export default function Home() {
   const { t } = useSession();
-  const { data } = useStore();
+  const { data, caseEvent, deleteCase } = useStore();
+  const [showPast, setShowPast] = useState(false);
 
   if (!data.welcomed) return <Redirect href="/welcome" />;
 
-  const active = data.cases.filter((c) => !OWNED.has(c.status));
+  const active = data.cases.filter((c) => !OWNED.has(c.status) && c.status !== 'walked_away');
+  const past = data.cases.filter((c) => c.status === 'walked_away');
+  const confirmDelete = (c: PurchaseCase) =>
+    confirmAction({
+      title: t('case.delete'),
+      message: t('case.deleteConfirm'),
+      confirmLabel: t('case.delete'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+      onConfirm: () => deleteCase(c.id),
+    });
   const owned = data.cases.filter((c) => OWNED.has(c.status));
   const verdict = data.profile && data.readinessCar ? computeBudget({ profile: data.profile, car: data.readinessCar, now: new Date() }).verdict : undefined;
 
@@ -43,6 +56,23 @@ export default function Home() {
         ))}
         <Button label={t('home.newCase')} onPress={() => router.push('/cases/new')} />
       </Section>
+
+      {past.length ? (
+        <Section title={t('home.pastTitle')}>
+          <Button kind="ghost" label={showPast ? t('home.hidePast') : t('home.showPast', { n: past.length })} onPress={() => setShowPast((v) => !v)} />
+          {showPast
+            ? past.map((c) => (
+                <View key={c.id} style={{ gap: Spacing.xs }}>
+                  <CaseCard c={c} />
+                  <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                    <Button kind="secondary" label={t('case.reopen')} onPress={() => caseEvent(c.id, { type: 'reopen' })} />
+                    <Button kind="ghost" label={t('case.delete')} onPress={() => confirmDelete(c)} />
+                  </View>
+                </View>
+              ))
+            : null}
+        </Section>
+      ) : null}
 
       <Section title={t('home.ownTitle')}>
         {owned.length === 0 ? (

@@ -77,3 +77,25 @@ describe('skipping the inspection (S2)', () => {
     expect(applyEvent(c, { type: 'inspection_skipped' }, ctx)).toEqual({ ok: false, error: 'registry_missing' });
   });
 });
+
+describe('inspection screen state (S3, S4, S5)', () => {
+  it('keeps the test-drive answers', () => {
+    const c = apply(golf(), { type: 'test_drive_done', answers: { vin_plate: 'ok', rust_check: 'issue' } });
+    expect(c.testDriveAnswers).toEqual({ vin_plate: 'ok', rust_check: 'issue' });
+  });
+
+  it('replaces an earlier inspection report for the same item', () => {
+    const c = golf();
+    const id = c.items.find((i) => i.inspectable && i.status !== 'verified')!.id;
+    const first = apply(c, { type: 'inspection_result', outcomes: { [id]: 'issue' } });
+    const updated = apply(first, { type: 'inspection_result', outcomes: { [id]: 'ok' } });
+    const reports = updated.evidence.filter((e) => e.kind === 'inspection_report' && e.itemIds.includes(id));
+    expect(reports.map((e) => e.outcome)).toEqual(['supports']);
+  });
+
+  it('records a booking and rejects an invalid one', () => {
+    const c = apply(golf(), { type: 'inspection_booked', partner: 'Demo Katsastus', date: '2026-10-20T09:00:00.000Z' });
+    expect(c.inspectionBooking).toEqual({ partner: 'Demo Katsastus', date: '2026-10-20T09:00:00.000Z' });
+    expect(applyEvent(c, { type: 'inspection_booked', partner: '', date: 'x' }, ctx)).toEqual({ ok: false, error: 'invalid_booking' });
+  });
+});
