@@ -116,14 +116,13 @@ export const en = {
   'claims.extractor.llm+rules': 'Found by rules + AI',
   'claims.injection': 'This ad contains text aimed at automated tools. It changes nothing: only documents, the registry or an inspector can verify.',
   'claims.remove': 'Remove',
-  'claims.add': 'Add a claim the ad missed',
+  'claims.add': 'Add another claim',
   'claims.addNote': 'What did the seller say?',
   'claims.addButton': 'Add',
   'claims.confirm': 'Looks right, start checking',
   'claims.none': 'No claims found. Add the ones you see.',
   'claims.notChecked': 'Not checked yet',
   'claims.adText': 'The ad',
-  'seller.private': 'Private seller: the Sale of Goods Act applies, not consumer protection ⚠️',
   'seller.dealer': 'Dealer: consumer protection applies ⚠️',
   'seller.unknown': 'Seller type unknown',
 
@@ -372,6 +371,15 @@ export const en = {
   'result.cashCheck': 'Price {price} + buffer {buffer} = {needed} needed up front; you have about {available}.',
   'result.cashCheckNoSavings': 'Price {price} + buffer {buffer} = {needed} needed up front.',
   'result.loanNote': 'Includes a loan of about {principal} over {years} years at {apr} % interest (team assumption, not an offer).',
+  'claims.addedTag': 'added',
+  'claims.addedConfirm': 'Added: {title}',
+  'claims.otherTitle': 'Short title (for example “Clutch”)',
+  'claims.edit': 'Edit',
+  'claims.save': 'Save',
+  'claims.editValue': 'Value',
+  'claims.editQuote': 'What the ad says',
+  'seller.privateTitle': 'Private seller',
+  'seller.privateBody': 'The Sale of Goods Act applies, not consumer protection. No statutory warranty: check everything before paying.',
 } as const;
 
 export type MessageKey = keyof typeof en;

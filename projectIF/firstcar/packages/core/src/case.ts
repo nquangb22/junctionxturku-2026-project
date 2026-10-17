@@ -34,7 +34,7 @@ import type {
 export const OWNERSHIP_NOTIFICATION_DAYS = 7; // ⚠️ verify (Traficom)
 
 export type CaseEvent =
-  | { type: 'claim_edited'; claimId: string; value: ClaimValue }
+  | { type: 'claim_edited'; claimId: string; value?: ClaimValue; quote?: string }
   | { type: 'claim_removed'; claimId: string }
   | { type: 'claim_added'; claimType: ClaimType; value: ClaimValue; quote: string }
   | { type: 'claims_confirmed' }
@@ -179,9 +179,20 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
   const ledgerOpen = LEDGER_OPEN.has(c.status);
 
   switch (e.type) {
-    case 'claim_edited':
+    case 'claim_edited': {
       if (!inReview) return fail('claims_locked');
-      return bump(c, { ...c, claims: c.claims.map((cl) => (cl.id === e.claimId ? { ...cl, value: e.value, extractor: 'user', confidence: 'high' } : cl)) }, ctx);
+      const quote = e.quote?.trim();
+      if (e.quote !== undefined && !quote) return fail('empty_quote');
+      return bump(c, {
+        ...c,
+        claims: c.claims.map((cl) => {
+          if (cl.id !== e.claimId) return cl;
+          const edited = { ...cl, value: e.value ?? cl.value, extractor: 'user' as const, confidence: 'high' as const };
+          // A rewritten quote no longer points at the ad text, so drop its highlight offsets.
+          return quote !== undefined && quote !== cl.quote ? { ...edited, quote, rawStart: undefined, rawEnd: undefined } : edited;
+        }),
+      }, ctx);
+    }
 
     case 'claim_removed':
       if (!inReview) return fail('claims_locked');

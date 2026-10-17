@@ -149,3 +149,16 @@ describe('affordability (T6, E2)', () => {
     expect(b.verdict.level).not.toBe('comfortable');
   });
 });
+
+describe('editing a claim (T7)', () => {
+  it('changes the value and the quote, and drops the stale highlight', () => {
+    const c = newCase('golf-odometer');
+    const odo = c.claims.find((cl) => cl.type === 'odometer')!;
+    const edited = apply(c, { type: 'claim_edited', claimId: odo.id, value: { kind: 'km', km: 212_400 }, quote: 'Ajettu 212 400 km' });
+    const after = edited.claims.find((cl) => cl.id === odo.id)!;
+    expect(after.value).toEqual({ kind: 'km', km: 212_400 });
+    expect(after.quote).toBe('Ajettu 212 400 km');
+    expect(after.rawStart).toBeUndefined();
+    expect(applyEvent(c, { type: 'claim_edited', claimId: odo.id, quote: '  ' }, ctx)).toEqual({ ok: false, error: 'empty_quote' });
+  });
+});
