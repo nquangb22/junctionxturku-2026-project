@@ -238,6 +238,7 @@ export type FindingCode =
   | 'tax_unpaid'
   | 'finance_owner'
   | 'owner_not_seller'
+  | 'owner_matches'
   | 'vin_mismatch'
   | 'scam_pattern'
   | 'injection_text'

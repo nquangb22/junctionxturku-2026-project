@@ -105,7 +105,7 @@ export default function Registry() {
           {reg.ownership ? (
             <Card tone={reg.ownership.ownerKind === 'finance_company' || reg.ownership.holderDiffersFromOwner ? 'danger' : 'success'}>
               <Txt variant="bodyStrong">{t(`registry.owner.${reg.ownership.ownerKind}`)}</Txt>
-              {reg.ownership.ownersCount !== undefined ? <Txt variant="small">{t('registry.owners', { n: reg.ownership.ownersCount })}</Txt> : null}
+              {reg.ownership.ownersCount !== undefined ? <Txt variant="small">{t(reg.ownership.ownersCount === 1 ? 'registry.owners.one' : 'registry.owners.other', { n: reg.ownership.ownersCount })}</Txt> : null}
               <Txt variant="caption">🔒 {t('registry.ownerLocal')}</Txt>
             </Card>
           ) : null}

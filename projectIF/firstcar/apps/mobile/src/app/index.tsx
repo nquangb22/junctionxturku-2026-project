@@ -1,5 +1,6 @@
 import { CLAIM_TITLES, computeBudget, type PurchaseCase } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { VERDICT_TONE, type StatusTone } from '@/constants/theme';
 import { useSession } from '@/state/session';
@@ -25,7 +26,7 @@ export default function Home() {
       <Txt variant="title" accessibilityRole="header">
         {t('home.tagline')}
       </Txt>
-      <Badge tone="success" icon="🔒" label={t('home.privacy')} />
+      {Platform.OS === 'web' ? <Badge tone="warning" icon="⚠️" label={t('home.privacyWeb')} /> : <Badge tone="success" icon="🔒" label={t('home.privacy')} />}
 
       <NavCard
         title={t('home.readyTitle')}

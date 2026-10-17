@@ -155,7 +155,7 @@ export const FINDING_TEXTS: Record<FindingCode, Texts> = {
     fi: 'Vastaa rekisteriä ({regKm} katsastuksessa {date}).',
   },
   owners_mismatch: {
-    en: 'The ad says {adOwners} owner(s); the registry shows {regOwners}.',
+    en: 'Owners according to the ad: {adOwners}. According to the registry: {regOwners}.',
     fi: 'Ilmoituksen mukaan omistajia {adOwners}, rekisterin mukaan {regOwners}.',
   },
   year_mismatch: {
@@ -175,8 +175,12 @@ export const FINDING_TEXTS: Record<FindingCode, Texts> = {
     fi: 'Omistaja on rahoitusyhtiö. Myyjä ei välttämättä voi luovuttaa omistusta. Älä osta ennen kuin asia on selvitetty.',
   },
   owner_not_seller: {
-    en: 'The name on the seller\'s ID does not match the registered owner. Do not buy until resolved.',
-    fi: 'Myyjän henkilöllisyystodistuksen nimi ei vastaa rekisteröityä omistajaa. Älä osta ennen kuin asia on selvitetty.',
+    en: 'The name on the seller’s ID does not match the registered owner. Possible reasons: the seller is selling for a family member or friend (ask for a signed power of attorney, valtakirja, and a copy of the owner’s ID), the registry is not yet updated, or this is a scam. Do not pay until the owner situation is clear. (The registered owner’s name is kept on this phone and not shown here.)',
+    fi: 'Myyjän henkilöllisyystodistuksen nimi ei vastaa rekisteröityä omistajaa. Mahdollisia syitä: myyjä myy perheenjäsenen tai ystävän autoa (pyydä allekirjoitettu valtakirja ja kopio omistajan henkilöllisyystodistuksesta), rekisteriä ei ole vielä päivitetty, tai kyse on huijauksesta. Älä maksa ennen kuin omistustilanne on selvä. (Rekisteröidyn omistajan nimi säilytetään tässä puhelimessa eikä sitä näytetä tässä.)',
+  },
+  owner_matches: {
+    en: '✓ The name matches the registered owner.',
+    fi: '✓ Nimi vastaa rekisteröityä omistajaa.',
   },
   vin_mismatch: {
     en: 'The VIN on the car does not match the papers. Do not buy.',

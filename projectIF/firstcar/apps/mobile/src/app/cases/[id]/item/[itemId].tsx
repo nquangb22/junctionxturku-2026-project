@@ -173,12 +173,19 @@ function MandatoryControls({ c, item, onResult }: { c: PurchaseCase; item: Verif
       if (!c.registry) return <Txt variant="small">{t('item.needsRegistry')}</Txt>;
       return (
         <Card>
+          <Txt>{t('item.ownerExplain')}</Txt>
+          <Txt variant="bodyStrong" nativeID="owner-name-label">
+            {t('item.ownerName')}
+          </Txt>
+          {c.registry.isMock && c.registry.ownership?.ownerNameLocal ? (
+            <Txt variant="caption">{t('item.demoOwner', { name: c.registry.ownership.ownerNameLocal })}</Txt>
+          ) : null}
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder={t('item.ownerName')}
             placeholderTextColor={p.textSecondary}
             accessibilityLabel={t('item.ownerName')}
+            accessibilityLabelledBy="owner-name-label"
             autoCapitalize="words"
             autoCorrect={false}
             maxLength={80}

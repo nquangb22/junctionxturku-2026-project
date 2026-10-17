@@ -272,7 +272,7 @@ export function ownerComparisonEvidence(c: PurchaseCase, sellerNameFromId: strin
     itemIds: [mandatoryItemId('owner_matches_seller')],
     facts: [],
     outcome: matches ? 'supports' : 'contradicts',
-    findings: matches ? [] : [{ kind: 'red_flag', code: 'owner_not_seller', params: {}, blocking: true }],
+    findings: [matches ? { kind: 'match', code: 'owner_matches', params: {} } : { kind: 'red_flag', code: 'owner_not_seller', params: {}, blocking: true }],
     capturedAt: now.toISOString(),
   };
 }
