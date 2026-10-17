@@ -47,6 +47,24 @@ describe('mileage gap (T2)', () => {
     expect(mileageGap(corolla(), NOW)).toBeUndefined();
   });
 
+  it('uses the higher per-km value for a car under 10 years old', () => {
+    const c = golf();
+    const newer = { ...c, listing: { ...c.listing, car: { ...c.listing.car, modelYear: 2020 } } };
+    const gap = mileageGap(newer, NOW)!;
+    expect(gap.eurPerKm).toBe(VALUE_PER_KM_EUR.under10y);
+    expect(gap.valueImpact.minor).toBe(Math.round(32_400 * 0.08) * 100);
+  });
+
+  it('is undefined when the registry reading is lower than the ad', () => {
+    const c = golf();
+    const lower = { ...c, registry: { ...c.registry!, inspection: { ...c.registry!.inspection!, odometerKmAtLast: 150_000 } } };
+    expect(mileageGap(lower, NOW)).toBeUndefined();
+  });
+
+  it('is undefined before the registry has been checked', () => {
+    expect(mileageGap(apply(newCase('golf-odometer'), { type: 'claims_confirmed' }), NOW)).toBeUndefined();
+  });
+
   it('explains the difference in the finding text', () => {
     const odo = golf().items.find((i) => i.origin.kind === 'claim' && i.origin.claimType === 'odometer')!;
     const text = renderFinding(odo.findings.find((f) => f.code === 'odometer_rollback')!, 'en');
@@ -123,6 +141,7 @@ describe('affordability (T6, E2)', () => {
     expect(verdictBand(0.15)).toBe('manageable');
     expect(verdictBand(0.249)).toBe('manageable');
     expect(verdictBand(0.25)).toBe('tight');
+    expect(verdictBand(0.349)).toBe('tight');
     expect(verdictBand(0.35)).toBe('over_budget');
   });
 
@@ -130,6 +149,8 @@ describe('affordability (T6, E2)', () => {
     expect(loanInstalment(eur(6900), 0.07, 60).minor).toBe(13663);
     expect(loanInstalment(eur(1200), 0, 12).minor).toBe(10000);
     expect(loanInstalment(eur(0)).minor).toBe(0);
+    expect(loanInstalment(eur(6900), 0.07, 0).minor).toBe(0);
+    expect(loanInstalment(eur(6900), 0.07, -12).minor).toBe(0);
   });
 
   it('adds a loan line that raises the share when savings do not cover the price', () => {
