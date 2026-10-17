@@ -17,6 +17,7 @@ export const fi: Record<MessageKey, string> = {
   'common.no': 'Ei',
   'common.copied': 'Kopioitu',
   'common.error': 'Jokin meni vikaan: {error}',
+  'common.saveFailed': 'Viimeisimpiä muutoksia ei voitu tallentaa. Ne voivat kadota, jos suljet sovelluksen.',
 
   'welcome.title': 'Tietosi pysyvät tässä puhelimessa',
   'welcome.p1': 'Tulot, säästöt, autoilmoitukset ja myyjän tiedot tallennetaan salattuina tähän laitteeseen ja lukitaan Face ID:llä tai sormenjäljellä.',
@@ -31,6 +32,9 @@ export const fi: Record<MessageKey, string> = {
   'lock.failed': 'Avaaminen ei onnistunut. Yritä uudelleen.',
   'lock.keyLost': 'Salausavain on kadonnut (esimerkiksi biometriikka muuttui). Tallennettuja tietoja ei voi lukea.',
   'lock.reset': 'Poista kaikki ja aloita alusta',
+  'lock.corrupt': 'Tallennettuja tietoja ei voitu lukea. Tiedostoa ei ole muutettu, joten voit yrittää uudelleen ennen kuin poistat mitään.',
+  'lock.loadError': 'Tallennettuja tietoja ei voitu avata. Mitään ei ole poistettu. Yritä uudelleen.',
+  'lock.retry': 'Yritä uudelleen',
 
   'home.tagline': 'Osta käytetty auto ilman ikäviä yllätyksiä.',
   'home.readyTitle': 'Onko minulla varaa autoon?',
@@ -263,6 +267,8 @@ export const fi: Record<MessageKey, string> = {
   'insure.payloadTitle': 'Täsmälleen nämä tiedot jaetaan Ifille',
   'insure.notShared': 'Ei koskaan jaeta: tulot, säästöt, tarkistuksesi, näytöt, myyjän tiedot.',
   'insure.consent': 'Jaa nämä ja pyydä tarjous',
+  'insure.needProfile': 'Lisää ensin budjettitietosi. Niitä tarvitaan vakuutuspyyntöön, emmekä arvaa niitä puolestasi.',
+  'insure.toProfile': 'Määritä budjettini',
   'insure.quote': 'Tarjous: {amount} / kk (demo)',
   'insure.bind': 'Hyväksy ja vakuuta',
   'insure.register': 'Tee omistajanvaihdos (demo)',
@@ -298,4 +304,8 @@ export const fi: Record<MessageKey, string> = {
   'settings.deleteConfirm': 'Tämä poistaa kaikki tapaukset, budjetin ja salausavaimen. Toimintoa ei voi perua.',
   'settings.privacyTitle': 'Yksityisyys',
   'settings.privacyBody': 'Kaikki tallennetaan salattuna tähän puhelimeen. Ilmoituksen teksti siistitään henkilötiedoista ennen kuin se voisi päätyä palvelimelle. Ifille ei lähde mitään, ellet napauta “Jaa nämä ja pyydä tarjous”.',
+  'settings.webNote': 'Verkkodemo: tiedot tallennetaan salaamattomina tähän selaimeen. Älä syötä oikeita henkilötietoja.',
+  'error.title': 'Jokin meni vikaan',
+  'error.body': 'Sovellus kohtasi odottamattoman virheen. Tallennettuja tietojasi ei ole muutettu.',
+  'error.retry': 'Yritä uudelleen',
 };

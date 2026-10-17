@@ -25,21 +25,57 @@ const CLAIM_TYPES: ReadonlySet<string> = new Set<ClaimType>([
 const MAX_CLAIMS = 30;
 const MAX_KM = 2_000_000;
 
-function clampValue(v: ClaimValue): ClaimValue | undefined {
-  switch (v.kind) {
+const MAX_TEXT = 140;
+const MAX_NAME = 60;
+const ENUM_VALUES: ReadonlySet<string> = new Set(['full', 'mentioned', 'partial']);
+const MIN_MODEL_YEAR = 1950;
+const MAX_PRICE_EUR = 10_000_000;
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isKm = (v: unknown): v is number => isNum(v) && v >= 0 && v <= MAX_KM;
+
+/** Strictly validates one untrusted claim value; returns undefined for anything malformed. */
+function clampValue(v: unknown): ClaimValue | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const o = v as Record<string, unknown>;
+  switch (o.kind) {
     case 'km':
-      return v.km >= 0 && v.km <= MAX_KM ? v : undefined;
+      return isKm(o.km) ? { kind: 'km', km: o.km } : undefined;
     case 'count':
-      return Number.isInteger(v.n) && v.n >= 0 && v.n <= 20 ? v : undefined;
+      return isNum(o.n) && Number.isInteger(o.n) && o.n >= 0 && o.n <= 20 ? { kind: 'count', n: o.n } : undefined;
     case 'date':
-      return /^\d{4}(-\d{2})?$/.test(v.date) ? v : undefined;
+      return typeof o.date === 'string' && /^\d{4}(-\d{2})?$/.test(o.date) ? { kind: 'date', date: o.date } : undefined;
     case 'text':
-      return { kind: 'text', text: v.text.slice(0, 140) };
-    case 'event':
-      return v.atKm === undefined || (v.atKm >= 0 && v.atKm <= MAX_KM) ? v : undefined;
+      return typeof o.text === 'string' ? { kind: 'text', text: o.text.slice(0, MAX_TEXT) } : undefined;
+    case 'bool':
+      return typeof o.value === 'boolean' ? { kind: 'bool', value: o.value } : undefined;
+    case 'enum':
+      return typeof o.value === 'string' && ENUM_VALUES.has(o.value) ? { kind: 'enum', value: o.value } : undefined;
+    case 'money':
+      return isNum(o.eur) && o.eur > 0 && o.eur <= MAX_PRICE_EUR ? { kind: 'money', eur: o.eur } : undefined;
+    case 'event': {
+      if (o.atKm !== undefined && !isKm(o.atKm)) return undefined;
+      if (o.atDate !== undefined && !(typeof o.atDate === 'string' && /^\d{4}(-\d{2}){0,2}$/.test(o.atDate))) return undefined;
+      return { kind: 'event', ...(o.atKm !== undefined && { atKm: o.atKm }), ...(o.atDate !== undefined && { atDate: o.atDate }) };
+    }
     default:
-      return v;
+      return undefined;
   }
+}
+
+/** Car fields from untrusted LLM output; invalid fields are dropped. */
+function sanitiseLlmCar(raw: unknown, now: Date): LlmExtractionV1['car'] {
+  if (typeof raw !== 'object' || raw === null) return {};
+  const o = raw as Record<string, unknown>;
+  const name = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_NAME) : undefined);
+  const year = o.modelYear;
+  const price = o.priceEur;
+  return {
+    make: name(o.make),
+    model: name(o.model),
+    modelYear: isNum(year) && Number.isInteger(year) && year >= MIN_MODEL_YEAR && year <= now.getUTCFullYear() + 1 ? year : undefined,
+    priceEur: isNum(price) && price > 0 && price <= MAX_PRICE_EUR ? price : undefined,
+  };
 }
 
 /**
@@ -69,6 +105,13 @@ export function validateLlmExtraction(raw: unknown, redactedText: string): { cla
     });
   }
   return { claims, flaggedByModel: data.instructionsAddressedToAI === true };
+}
+
+const SELLER_TYPES: ReadonlySet<string> = new Set<SellerType>(['private', 'dealer', 'unknown']);
+
+function llmSellerType(raw: unknown): SellerType {
+  const t = typeof raw === 'object' && raw !== null ? (raw as Partial<LlmExtractionV1>).sellerType : undefined;
+  return typeof t === 'string' && SELLER_TYPES.has(t) ? t : 'unknown';
 }
 
 const sameValue = (a: ClaimValue, b: ClaimValue) => JSON.stringify(a) === JSON.stringify(b);
@@ -124,13 +167,13 @@ export function analyseAd(raw: string, opts: AnalyseOptions): AnalysedAd {
   const llm = opts.llm === undefined ? undefined : validateLlmExtraction(opts.llm, prep.redacted);
   const claims = mapQuotesToRaw(mergeClaims(rules.claims, llm?.claims ?? []), prep.cleaned);
 
-  const llmCar = (opts.llm as Partial<LlmExtractionV1> | undefined)?.car;
+  const llmCar = opts.llm === undefined ? undefined : sanitiseLlmCar((opts.llm as Partial<LlmExtractionV1> | null)?.car, opts.now);
   const car = { ...rules.car };
   if (llmCar) {
     car.make ??= llmCar.make;
     car.model ??= llmCar.model;
     car.modelYear ??= llmCar.modelYear;
-    if (!car.price && typeof llmCar.priceEur === 'number') car.price = { minor: llmCar.priceEur * 100, currency: 'EUR' };
+    if (!car.price && llmCar.priceEur !== undefined) car.price = { minor: Math.round(llmCar.priceEur * 100), currency: 'EUR' };
   }
 
   const listing: Listing = {
@@ -140,7 +183,7 @@ export function analyseAd(raw: string, opts: AnalyseOptions): AnalysedAd {
     textHash: opts.textHash,
     plateLocal: prep.plate,
     vinLocal: prep.vin,
-    sellerType: rules.sellerType !== 'unknown' ? rules.sellerType : ((opts.llm as Partial<LlmExtractionV1> | undefined)?.sellerType ?? 'unknown'),
+    sellerType: rules.sellerType !== 'unknown' ? rules.sellerType : llmSellerType(opts.llm),
     car,
     injectionSuspected: prep.injectionInRaw || rules.injectionSuspected || (llm?.flaggedByModel ?? false),
     extractor: llm ? (opts.llmSource ?? 'llm+rules') : 'rules',

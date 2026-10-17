@@ -1,8 +1,10 @@
 import { isStale, itemTitle, type VerificationItem, type VerificationStatus } from '@firstcar/core';
-import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, router } from 'expo-router';
 import { View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Spacing, type StatusTone } from '@/constants/theme';
+import { useCaseId } from '@/hooks/use-case-id';
+import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase } from '@/state/store';
 import { Badge, NavCard, Screen, Txt } from '@/ui/primitives';
@@ -12,8 +14,7 @@ const ORDER: Record<VerificationStatus, number> = { not_verified: 0, needs_inspe
 const CRIT_ORDER = { critical: 0, important: 1, minor: 2 } as const;
 
 export default function Ledger() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const c = useCase(id);
+  const c = useCase(useCaseId());
   const { t, prefs } = useSession();
   if (!c) return <Redirect href="/" />;
 
@@ -27,6 +28,7 @@ export default function Ledger() {
         <NavCard
           key={item.id}
           title={itemTitle(item, prefs.locale)}
+          accessibilityLabel={[itemTitle(item, prefs.locale), t(`status.${item.status}`), ...extraBadges(item, t).map((b) => b.label)].join('. ')}
           tone={item.status === 'not_verified' ? 'danger' : undefined}
           onPress={() => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId: item.id } })}
           right={<ItemBadges item={item} />}
@@ -36,15 +38,25 @@ export default function Ledger() {
   );
 }
 
+type ExtraBadge = { tone: StatusTone; label: string; icon?: string };
+
+function extraBadges(item: VerificationItem, t: Translate): ExtraBadge[] {
+  const badges: ExtraBadge[] = [];
+  if (item.criticality === 'critical') badges.push({ tone: 'neutral', label: t('criticality.critical') });
+  if (item.acceptedRisk) badges.push({ tone: 'warning', label: t('ledger.acceptedRisk') });
+  if (isStale(item)) badges.push({ tone: 'warning', icon: '⏱', label: t('ledger.due') });
+  if (item.findings.some((f) => f.kind === 'red_flag')) badges.push({ tone: 'danger', icon: '⚑', label: t('ledger.redFlag') });
+  return badges;
+}
+
 function ItemBadges({ item }: { item: VerificationItem }) {
   const { t } = useSession();
   return (
     <View style={{ alignItems: 'flex-end', gap: Spacing.xs }}>
       <StatusPill status={item.status} t={t} />
-      {item.criticality === 'critical' ? <Badge tone="neutral" label={t('criticality.critical')} /> : null}
-      {item.acceptedRisk ? <Badge tone="warning" label={t('ledger.acceptedRisk')} /> : null}
-      {isStale(item) ? <Badge tone="warning" icon="⏱" label={t('ledger.due')} /> : null}
-      {item.findings.some((f) => f.kind === 'red_flag') ? <Badge tone="danger" icon="⚑" label={t('ledger.redFlag')} /> : null}
+      {extraBadges(item, t).map((b) => (
+        <Badge key={b.label} tone={b.tone} icon={b.icon} label={b.label} />
+      ))}
     </View>
   );
 }

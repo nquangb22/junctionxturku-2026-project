@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { Radius, Spacing, type StatusTone } from '@/constants/theme';
+import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
@@ -27,8 +28,9 @@ const USER_EVIDENCE: EvidenceKind[] = ['service_record', 'receipt', 'photo', 'te
 const FINDING_TONE: Record<Finding['kind'], StatusTone> = { contradiction: 'danger', red_flag: 'danger', stale: 'warning', missing: 'warning', match: 'success' };
 
 export default function ItemDetail() {
-  const { id, itemId } = useLocalSearchParams<{ id: string; itemId: string }>();
-  const c = useCase(id);
+  const { itemId: rawItemId } = useLocalSearchParams<{ itemId: string | string[] }>();
+  const itemId = Array.isArray(rawItemId) ? rawItemId[0] : rawItemId;
+  const c = useCase(useCaseId());
   const { t, prefs } = useSession();
   const { caseEvent } = useStore();
   const p = usePalette();
@@ -45,8 +47,12 @@ export default function ItemDetail() {
 
   const copy = async () => {
     if (!question) return;
-    await Clipboard.setStringAsync(question.sellerText);
-    setCopied(true);
+    try {
+      await Clipboard.setStringAsync(question.sellerText);
+      setCopied(true);
+    } catch (e) {
+      setError(t('common.error', { error: e instanceof Error ? e.message : String(e) }));
+    }
   };
 
   return (
@@ -143,6 +149,8 @@ function MandatoryControls({ c, item, onResult }: { c: PurchaseCase; item: Verif
             placeholderTextColor={p.textSecondary}
             accessibilityLabel={t('item.ownerName')}
             autoCapitalize="words"
+            autoCorrect={false}
+            maxLength={80}
             style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
           />
           <Button label={t('item.compare')} disabled={!name.trim()} onPress={() => onResult(caseEvent(c.id, { type: 'owner_compared', sellerNameFromId: name }))} />
@@ -179,8 +187,11 @@ function AddEvidence({ c, item, onResult }: { c: PurchaseCase; item: Verificatio
 
   const add = () => {
     if (!kind) return;
-    onResult(caseEvent(c.id, { type: 'evidence_added', kind, itemIds: [item.id], outcome, note: note.trim() || undefined }));
+    const err = caseEvent(c.id, { type: 'evidence_added', kind, itemIds: [item.id], outcome, note: note.trim() || undefined });
+    onResult(err);
+    if (err) return;
     setKind(undefined);
+    setOutcome('supports');
     setNote('');
   };
 

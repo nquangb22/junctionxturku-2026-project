@@ -2,27 +2,21 @@
  * App data store: profile, readiness car, purchase cases. Immutable updates only; every case
  * change goes through core's applyEvent. Persisted to the encrypted vault on change.
  */
-import { applyEvent, type BuyerProfile, type CarSpec, type CaseEvent, type PurchaseCase } from '@firstcar/core';
+import { applyEvent, type CaseEvent, type PurchaseCase } from '@firstcar/core';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import { EMPTY_APP_DATA, parseAppData, type AppData } from '@/state/app-data';
 import { useSession } from '@/state/session';
 import { saveVault } from '@/vault/vault';
 
-export interface AppData {
-  schema: 1;
-  welcomed: boolean;
-  profile?: BuyerProfile;
-  readinessCar?: CarSpec;
-  cases: PurchaseCase[];
-  llmMock: boolean;
-  remindersOn: boolean;
-}
+export type { AppData };
 
-const EMPTY: AppData = { schema: 1, welcomed: false, cases: [], llmMock: true, remindersOn: false };
-
-interface Store {
+interface StoreState {
   data: AppData;
   saveError?: string;
+}
+
+interface StoreActions {
   patch(p: Partial<Omit<AppData, 'cases' | 'schema'>>): void;
   addCase(c: PurchaseCase): void;
   deleteCase(id: string): void;
@@ -31,63 +25,66 @@ interface Store {
   getCase(id: string): PurchaseCase | undefined;
 }
 
-const StoreContext = createContext<Store | null>(null);
+type Store = StoreState & StoreActions;
 
-export function useStore(): Store {
-  const s = useContext(StoreContext);
-  if (!s) throw new Error('useStore outside StoreProvider');
+// Split so components that only dispatch (useStoreActions) do not re-render on every data change.
+const StateContext = createContext<StoreState | null>(null);
+const ActionsContext = createContext<StoreActions | null>(null);
+
+export function useStoreState(): StoreState {
+  const s = useContext(StateContext);
+  if (!s) throw new Error('useStoreState outside StoreProvider');
   return s;
 }
 
-function parse(json: string | undefined): AppData {
-  if (!json) return EMPTY;
-  try {
-    const parsed = JSON.parse(json) as Partial<AppData>;
-    return parsed.schema === 1 ? { ...EMPTY, ...parsed } : EMPTY;
-  } catch {
-    return EMPTY;
-  }
+export function useStoreActions(): StoreActions {
+  const a = useContext(ActionsContext);
+  if (!a) throw new Error('useStoreActions outside StoreProvider');
+  return a;
+}
+
+/** State and actions together. */
+export function useStore(): Store {
+  const state = useStoreState();
+  const actions = useStoreActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const { initialJson, prefs } = useSession();
-  const [data, setData] = useState<AppData>(() => parse(initialJson));
+  // The session only opens the app with a validated vault; the fallback is for an empty one.
+  const [data, setData] = useState<AppData>(() => (initialJson ? parseAppData(initialJson) : undefined) ?? EMPTY_APP_DATA);
   const [saveError, setSaveError] = useState<string | undefined>();
   // Latest committed data, so several events in one handler see each other's results.
   // Written only in event handlers (commit), never during render.
-  const latest = useRef<AppData | null>(null);
+  const latest = useRef<AppData>(data);
   const firstRender = useRef(true);
-  // Saves run immediately (no debounce: a killed app must not lose the last action) and in order.
-  const saveQueue = useRef<Promise<void>>(Promise.resolve());
 
+  // Saves run immediately (no debounce: a killed app must not lose the last action); saveVault keeps them ordered.
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
-    const json = JSON.stringify(data);
-    saveQueue.current = saveQueue.current
-      .then(() => saveVault(json))
-      .then(
-        () => setSaveError(undefined),
-        (e: unknown) => setSaveError(e instanceof Error ? e.message : String(e)),
-      );
+    saveVault(JSON.stringify(data)).then(
+      () => setSaveError(undefined),
+      (e: unknown) => setSaveError(e instanceof Error ? e.message : String(e)),
+    );
   }, [data]);
 
-  const current = useCallback(() => latest.current ?? data, [data]);
   const commit = useCallback((next: AppData) => {
     latest.current = next;
     setData(next);
   }, []);
 
-  const patch = useCallback<Store['patch']>((p) => commit({ ...current(), ...p }), [commit, current]);
-  const addCase = useCallback((c: PurchaseCase) => commit({ ...current(), cases: [c, ...current().cases] }), [commit, current]);
-  const deleteCase = useCallback((id: string) => commit({ ...current(), cases: current().cases.filter((c) => c.id !== id) }), [commit, current]);
-  const getCase = useCallback((id: string) => current().cases.find((c) => c.id === id), [current]);
+  const patch = useCallback<StoreActions['patch']>((p) => commit({ ...latest.current, ...p }), [commit]);
+  const addCase = useCallback((c: PurchaseCase) => commit({ ...latest.current, cases: [c, ...latest.current.cases] }), [commit]);
+  const deleteCase = useCallback((id: string) => commit({ ...latest.current, cases: latest.current.cases.filter((c) => c.id !== id) }), [commit]);
+  const getCase = useCallback((id: string) => latest.current.cases.find((c) => c.id === id), []);
 
-  const caseEvent = useCallback<Store['caseEvent']>(
+  const caseEvent = useCallback<StoreActions['caseEvent']>(
     (id, event) => {
-      const base = current();
+      const base = latest.current;
       const existing = base.cases.find((c) => c.id === id);
       if (!existing) return 'unknown_case';
       const result = applyEvent(existing, event, { now: new Date(), locale: prefs.locale });
@@ -95,15 +92,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       commit({ ...base, cases: base.cases.map((c) => (c.id === id ? result.next : c)) });
       return undefined;
     },
-    [commit, current, prefs.locale],
+    [commit, prefs.locale],
   );
 
-  const store = useMemo<Store>(() => ({ data, saveError, patch, addCase, deleteCase, caseEvent, getCase }), [data, saveError, patch, addCase, deleteCase, caseEvent, getCase]);
-  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+  const state = useMemo<StoreState>(() => ({ data, saveError }), [data, saveError]);
+  const actions = useMemo<StoreActions>(() => ({ patch, addCase, deleteCase, caseEvent, getCase }), [patch, addCase, deleteCase, caseEvent, getCase]);
+  return (
+    <ActionsContext.Provider value={actions}>
+      <StateContext.Provider value={state}>{children}</StateContext.Provider>
+    </ActionsContext.Provider>
+  );
 }
 
 /** The case for a route param, kept fresh from the store. */
 export function useCase(id: string | undefined): PurchaseCase | undefined {
-  const { data } = useStore();
+  const { data } = useStoreState();
   return id ? data.cases.find((c) => c.id === id) : undefined;
 }

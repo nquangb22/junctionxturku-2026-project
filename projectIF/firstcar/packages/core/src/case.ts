@@ -9,6 +9,7 @@ import {
   isStale,
   makeEvidence,
   mandatoryItemId,
+  nextNumericId,
   ownerComparisonEvidence,
   recomputeItems,
   registryEvidence,
@@ -144,7 +145,11 @@ const fail = (error: string): ApplyResult => ({ ok: false, error });
 /** Recomputes derived data after any ledger change and keeps the gate honest. */
 function settle(c: PurchaseCase, ctx: Ctx): PurchaseCase {
   const items = recomputeItems(c);
-  const withItems = { ...c, items };
+  const assuranceChoices = {
+    ...c.assuranceChoices,
+    ...Object.fromEntries(c.clauses.filter((cl) => cl.kind === 'seller_assurance').map((cl) => [cl.id, cl.included])),
+  };
+  const withItems = { ...c, items, assuranceChoices };
   const clauses = generateClauses(withItems, ctx.locale, c.clauses);
   const next = { ...withItems, clauses };
   // New evidence can break a passed gate: step back to contract_prep (§4.2).
@@ -158,6 +163,12 @@ function bump(prev: PurchaseCase, next: PurchaseCase, ctx: Ctx): ApplyResult {
 
 function addEvidence(c: PurchaseCase, evidence: Evidence[], ctx: Ctx): PurchaseCase {
   return settle({ ...c, evidence: [...c.evidence, ...evidence] }, ctx);
+}
+
+/** One-answer-per-item evidence: drops earlier single-item evidence of `kind` for `itemId`, then adds `make`'s result. */
+function replaceAnswer(c: PurchaseCase, kind: EvidenceKind, itemId: string, make: (base: PurchaseCase) => Evidence, ctx: Ctx): PurchaseCase {
+  const base = { ...c, evidence: c.evidence.filter((ev) => !(ev.kind === kind && ev.itemIds.length === 1 && ev.itemIds[0] === itemId)) };
+  return addEvidence(base, [make(base)], ctx);
 }
 
 export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult {
@@ -175,7 +186,7 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
 
     case 'claim_added': {
       if (!inReview) return fail('claims_locked');
-      const id = `u${c.claims.filter((cl) => cl.id.startsWith('u')).length + 1}`;
+      const id = nextNumericId(c.claims.map((cl) => cl.id), 'u');
       const claim = { id, type: e.claimType, value: e.value, quote: e.quote, quoteStart: Number.MAX_SAFE_INTEGER, extractor: 'user' as const, confidence: 'high' as const };
       return bump(c, { ...c, claims: [...c.claims, claim] }, ctx);
     }
@@ -209,24 +220,27 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
 
     case 'owner_compared': {
       if (!ledgerOpen) return fail('ledger_closed');
-      const ev = ownerComparisonEvidence(c, e.sellerNameFromId, ctx.now);
-      if (!ev) return fail('registry_missing');
-      return bump(c, addEvidence(c, [ev], ctx), ctx);
+      if (!ownerComparisonEvidence(c, e.sellerNameFromId, ctx.now)) return fail('registry_missing');
+      return bump(c, replaceAnswer(c, 'registry_result', mandatoryItemId('owner_matches_seller'), (base) => ownerComparisonEvidence(base, e.sellerNameFromId, ctx.now)!, ctx), ctx);
     }
 
     case 'vin_confirmed': {
       if (!ledgerOpen) return fail('ledger_closed');
-      const ev = makeEvidence(c, { kind: 'test_drive_note', itemIds: [mandatoryItemId('vin_matches')], outcome: e.matches ? 'supports' : 'contradicts' }, ctx.now);
-      const flagged: Evidence = e.matches ? ev : { ...ev, findings: [{ kind: 'red_flag', code: 'vin_mismatch', params: {}, blocking: true }] };
-      return bump(c, addEvidence(c, [flagged], ctx), ctx);
+      const itemId = mandatoryItemId('vin_matches');
+      return bump(c, replaceAnswer(c, 'test_drive_note', itemId, (base) => {
+        const ev = makeEvidence(base, { kind: 'test_drive_note', itemIds: [itemId], outcome: e.matches ? 'supports' : 'contradicts' }, ctx.now);
+        return e.matches ? ev : { ...ev, findings: [{ kind: 'red_flag', code: 'vin_mismatch', params: {}, blocking: true }] };
+      }, ctx), ctx);
     }
 
     case 'payment_confirmed': {
       if (!ledgerOpen) return fail('ledger_closed');
-      const ev = makeEvidence(c, { kind: 'seller_message', itemIds: [mandatoryItemId('safe_payment')], outcome: e.safe ? 'supports' : 'contradicts' }, ctx.now);
-      // The buyer's own observation of the payment terms counts as "observed".
-      const observed: Evidence = { ...ev, strength: 'observed', findings: e.safe ? [] : [{ kind: 'red_flag', code: 'unsafe_payment', params: {}, blocking: true }] };
-      return bump(c, addEvidence(c, [observed], ctx), ctx);
+      const itemId = mandatoryItemId('safe_payment');
+      return bump(c, replaceAnswer(c, 'seller_message', itemId, (base) => {
+        const ev = makeEvidence(base, { kind: 'seller_message', itemIds: [itemId], outcome: e.safe ? 'supports' : 'contradicts' }, ctx.now);
+        // The buyer's own observation of the payment terms counts as "observed".
+        return { ...ev, strength: 'observed', findings: e.safe ? [] : [{ kind: 'red_flag', code: 'unsafe_payment', params: {}, blocking: true }] };
+      }, ctx), ctx);
     }
 
     case 'risk_accepted': {
@@ -252,7 +266,8 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
 
     case 'inspection_result': {
       if (!ledgerOpen) return fail('ledger_closed');
-      const entries = Object.entries(e.outcomes).filter(([itemId]) => c.items.some((i) => i.id === itemId));
+      const entries = Object.entries(e.outcomes).filter(([itemId]) => c.items.some((i) => i.id === itemId)).filter(([, outcome]) => outcome === 'ok' || outcome === 'issue');
+      if (entries.length === 0) return fail('no_outcomes');
       let acc = c;
       for (const [itemId, outcome] of entries) {
         acc = { ...acc, evidence: [...acc.evidence, makeEvidence(acc, { kind: 'inspection_report', itemIds: [itemId], outcome: outcome === 'ok' ? 'supports' : 'contradicts' }, ctx.now)] };

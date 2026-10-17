@@ -33,7 +33,7 @@ export function Screen({ children, footer }: { children: ReactNode; footer?: Rea
   const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: p.background }}>
-      <ScrollView contentContainerStyle={[styles.screen, { paddingBottom: Spacing.xxl + (footer ? 0 : insets.bottom) }]} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.screen, { paddingBottom: Spacing.xxl + (footer ? 0 : insets.bottom) }]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.column}>{children}</View>
       </ScrollView>
       {footer ? (
@@ -110,6 +110,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       accessibilityHint={accessibilityHint}
       disabled={inactive}
@@ -139,7 +140,7 @@ export function Choice<T extends string | number | boolean>({ options, value, on
           <Pressable
             key={String(o.value)}
             accessibilityRole="radio"
-            accessibilityState={{ selected }}
+            accessibilityState={{ checked: selected, selected }}
             onPress={() => onChange(o.value)}
             style={[styles.chip, { backgroundColor: selected ? p.primary : p.surface, borderColor: selected ? p.primary : p.border }]}>
             <Text style={[styles.chipText, { color: selected ? p.onPrimary : p.text }]}>{o.label}</Text>
@@ -150,14 +151,28 @@ export function Choice<T extends string | number | boolean>({ options, value, on
   );
 }
 
-/** A tappable card row used for navigation. */
-export function NavCard({ title, subtitle, onPress, right, tone }: { title: string; subtitle?: string; onPress: () => void; right?: ReactNode; tone?: StatusTone }) {
+/** A tappable card row used for navigation. Pass `accessibilityLabel` when `right` carries status the label must include. */
+export function NavCard({
+  title,
+  subtitle,
+  onPress,
+  right,
+  tone,
+  accessibilityLabel,
+}: {
+  title: string;
+  subtitle?: string;
+  onPress: () => void;
+  right?: ReactNode;
+  tone?: StatusTone;
+  accessibilityLabel?: string;
+}) {
   const p = usePalette();
   const toned = tone ? toneColors(p, tone) : undefined;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
+      accessibilityLabel={accessibilityLabel ?? (subtitle ? `${title}. ${subtitle}` : title)}
       onPress={onPress}
       style={({ pressed }) => [styles.card, styles.navCard, { backgroundColor: toned?.bg ?? p.surface, borderColor: toned?.fg ?? p.border, opacity: pressed ? 0.85 : 1 }]}>
       <View style={{ flex: 1, gap: Spacing.xs }}>
@@ -202,7 +217,7 @@ const styles = StyleSheet.create({
   button: { minHeight: 50, borderRadius: Radius.md, borderWidth: 1.5, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: { minHeight: 44, borderRadius: Radius.pill, borderWidth: 1.5, paddingHorizontal: Spacing.lg, justifyContent: 'center' },
+  chip: { minHeight: 48, borderRadius: Radius.pill, borderWidth: 1.5, paddingHorizontal: Spacing.lg, justifyContent: 'center' },
   chipText: { fontSize: 15, fontWeight: '600' },
   badge: { alignSelf: 'flex-start', maxWidth: '100%', borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
   badgeText: { fontSize: 13, fontWeight: '700', flexShrink: 1 },

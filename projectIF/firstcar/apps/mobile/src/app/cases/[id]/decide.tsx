@@ -1,8 +1,10 @@
 import { beltDueCost, computeBudget, evaluateGate, formatEur, itemTitle, type GateBlocker } from '@firstcar/core';
-import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { VERDICT_TONE } from '@/constants/theme';
+import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
@@ -10,8 +12,7 @@ import { carForCase } from '@/ui/case-helpers';
 import { Badge, Button, Card, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Decide() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const c = useCase(id);
+  const c = useCase(useCaseId());
   const { t, prefs } = useSession();
   const { data, caseEvent } = useStore();
   const p = usePalette();
@@ -59,12 +60,14 @@ export default function Decide() {
         <Section title={t('decide.blocked')}>
           {gate.blockers.map((b) => (
             <Card key={`${b.kind}-${b.itemId}`} tone={b.kind === 'red_flag' || b.kind === 'contradiction' ? 'danger' : 'warning'}>
-              <Txt
-                variant="bodyStrong"
+              <Pressable
                 accessibilityRole="button"
+                style={styles.blocker}
                 onPress={() => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId: b.itemId } })}>
-                {t(`decide.blocker.${b.kind}`, { item: title(b) })} ›
-              </Txt>
+                <Txt variant="bodyStrong">
+                  {t(`decide.blocker.${b.kind}`, { item: title(b) })} ›
+                </Txt>
+              </Pressable>
             </Card>
           ))}
         </Section>
@@ -88,3 +91,7 @@ export default function Decide() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  blocker: { minHeight: 48, justifyContent: 'center' },
+});

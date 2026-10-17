@@ -377,6 +377,8 @@ export interface PurchaseCase {
   testDriveDone: boolean;
   inspectionDone: boolean;
   clauses: ContractClause[];
+  /** Last include/exclude choice per assurance clause id, kept while the clause is absent (item verified). */
+  assuranceChoices?: Record<string, boolean>;
   decision?: { kind: 'buy' | 'walk_away'; at: ISO };
   handoff?: InsuranceHandoff;
   createdAt: ISO;

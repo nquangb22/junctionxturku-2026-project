@@ -26,10 +26,12 @@ export function remindersFor(c: PurchaseCase, now: Date, locale: Locale): Remind
   const out: Reminder[] = [make('tyre_change', tyres[0]!)];
 
   const nextDue = c.registry?.inspection?.nextDue;
-  if (nextDue) {
-    const due = new Date(`${nextDue}T09:00:00Z`);
+  const due = nextDue ? new Date(`${nextDue}T09:00:00Z`) : undefined;
+  if (due && !Number.isNaN(due.getTime())) {
     const twoWeeksBefore = new Date(due.getTime() - 14 * 86_400_000);
-    out.push(make('inspection', twoWeeksBefore > now ? twoWeeksBefore : due));
+    // Overdue: remind tomorrow instead of dropping the reminder.
+    const when = twoWeeksBefore > now ? twoWeeksBefore : due > now ? due : new Date(now.getTime() + 86_400_000);
+    out.push(make('inspection', when));
   }
 
   const bought = c.decision?.kind === 'buy' ? new Date(c.decision.at) : now;

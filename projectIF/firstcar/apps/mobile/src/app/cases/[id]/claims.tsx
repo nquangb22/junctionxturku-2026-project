@@ -1,9 +1,10 @@
 import { CLAIM_TITLES, type ClaimType, type SellerClaim } from '@firstcar/core';
-import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
@@ -15,8 +16,7 @@ import { QuoteHighlight, StatusPill } from '@/ui/status';
 const ADDABLE: ClaimType[] = ['service_history', 'timing_belt', 'clutch', 'no_rust', 'no_accidents', 'tyres_included', 'known_defects', 'other'];
 
 export default function ClaimsReview() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const c = useCase(id);
+  const c = useCase(useCaseId());
   const { t, prefs } = useSession();
   const { caseEvent } = useStore();
   const p = usePalette();
@@ -92,9 +92,11 @@ function ClaimRow({ claim, t, locale, focused, onFocus, onRemove }: { claim: Sel
   return (
     <Card tone={focused ? 'info' : undefined}>
       <View style={styles.row}>
-        <Txt variant="bodyStrong" style={{ flex: 1 }} onPress={onFocus} accessibilityRole="button">
-          {CLAIM_TITLES[claim.type][locale]}: {describeValue(claim.value, t)}
-        </Txt>
+        <Pressable accessibilityRole="button" onPress={onFocus} style={styles.claim}>
+          <Txt variant="bodyStrong">
+            {CLAIM_TITLES[claim.type][locale]}: {describeValue(claim.value, t)}
+          </Txt>
+        </Pressable>
         <StatusPill status="unchecked" t={t} />
       </View>
       <Txt variant="small">“{claim.quote}”</Txt>
@@ -106,5 +108,6 @@ function ClaimRow({ claim, t, locale, focused, onFocus, onRemove }: { claim: Sel
 const styles = StyleSheet.create({
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  claim: { flex: 1, minHeight: 48, justifyContent: 'center' },
   input: { minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
 });

@@ -1,10 +1,11 @@
 import { formatKm } from '@firstcar/core';
-import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
 import { lookupRegistry } from '@/adapters';
 import { Radius, Spacing } from '@/constants/theme';
+import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
@@ -14,8 +15,7 @@ import { DemoBadge } from '@/ui/status';
 const monthYear = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
 export default function Registry() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const c = useCase(id);
+  const c = useCase(useCaseId());
   const { t } = useSession();
   const { caseEvent } = useStore();
   const p = usePalette();
@@ -61,6 +61,8 @@ export default function Registry() {
         placeholder="ABC-123"
         placeholderTextColor={p.textSecondary}
         autoCapitalize="characters"
+        autoCorrect={false}
+        maxLength={12}
         accessibilityLabel={t('registry.plate')}
         style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
       />
