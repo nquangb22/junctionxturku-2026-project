@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { applyEvent, createCase, evaluateGate, type CaseEvent, type Ctx } from '../case';
 import { DEMO_ADS, MOCK_REGISTRY } from '../fixtures';
 import { beltDueCost, contractText, inspectionPlan, openQuestions, questionFor } from '../generators';
-import { itemTitle, renderFinding } from '../ledger';
+import { isMandatoryItem, itemTitle, renderFinding } from '../ledger';
 import { eur, formatKm } from '../money';
 import { analyseAd } from '../pipeline';
 import { remindersFor } from '../reminders';
@@ -336,5 +336,24 @@ describe('scenario items for missing claims', () => {
     expect(itemTitle(belt, 'en')).toBe('Timing belt history (not in the ad)');
     expect(c.items.some((i) => i.id === 'scenario:service_history_missing')).toBe(true);
     expect(questionFor(c, belt, 'fi')?.buyerText).toMatch(/jakohihna/i);
+  });
+});
+
+describe('mandatory tag', () => {
+  it('tags the mandatory checks and a seller claim that stands in for one, nothing else', () => {
+    // golf-odometer's ad says "Katsastettu 03/2026", so its inspection claim replaces the separate check.
+    const c = apply(newCase('golf-odometer'), { type: 'claims_confirmed' });
+    const tagged = c.items.filter(isMandatoryItem);
+
+    expect(tagged.filter((i) => i.origin.kind === 'mandatory')).toHaveLength(5);
+    expect(tagged.filter((i) => i.origin.kind === 'claim').map((i) => i.origin.kind === 'claim' && i.origin.claimType)).toEqual(['inspection_valid']);
+    expect(isMandatoryItem(claimItem(c, 'odometer'))).toBe(false);
+  });
+
+  it('keeps all six mandatory checks when the ad does not claim a valid inspection', () => {
+    const c = apply(newCase('passat-scam'), { type: 'claims_confirmed' });
+    expect(c.claims.some((cl) => cl.type === 'inspection_valid')).toBe(false);
+    expect(c.items.filter((i) => i.origin.kind === 'mandatory')).toHaveLength(6);
+    expect(c.items.filter(isMandatoryItem)).toHaveLength(6);
   });
 });

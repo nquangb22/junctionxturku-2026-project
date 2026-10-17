@@ -164,6 +164,7 @@ export const en = {
   'ledger.acceptedRisk': 'Accepted risk',
   'ledger.due': 'Due',
   'ledger.redFlag': 'Red flag',
+  'ledger.mandatory': 'Mandatory',
 
   'item.adSays': 'The ad says',
   'item.needs': 'Can be verified by: {strength}',

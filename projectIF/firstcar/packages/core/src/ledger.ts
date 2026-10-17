@@ -8,6 +8,7 @@ import {
   EVIDENCE_STRENGTH,
   FINDING_TEXTS,
   MANDATORY_CHECKS,
+  MANDATORY_CLAIM_TYPES,
   MANDATORY_TITLES,
   SCENARIO_ITEM_TITLES,
   STRENGTH_RANK,
@@ -34,6 +35,11 @@ const AGE_FOR_SERVICE_HISTORY_ITEM = 8;
 export const claimItemId = (claimId: string) => `claim:${claimId}`;
 export const mandatoryItemId = (checkId: string) => `mandatory:${checkId}`;
 
+/** A mandatory check, or a seller claim standing in for one. Both get the "Mandatory" tag in the app. */
+export function isMandatoryItem(item: VerificationItem): boolean {
+  return item.origin.kind === 'mandatory' || (item.origin.kind === 'claim' && MANDATORY_CLAIM_TYPES.has(item.origin.claimType));
+}
+
 /** Creates ledger items from confirmed claims, mandatory checks and "missing claim" scenarios. */
 export function buildItems(claims: SellerClaim[], car: Partial<CarSpec>, now: Date): VerificationItem[] {
   const claimItems: VerificationItem[] = claims
@@ -54,8 +60,8 @@ export function buildItems(claims: SellerClaim[], car: Partial<CarSpec>, now: Da
 
   const claimedTypes = new Set(claims.map((c) => c.type));
   const mandatoryItems: VerificationItem[] = MANDATORY_CHECKS
-    // The ad's own "inspection valid" claim already covers this check.
-    .filter((m) => !(m.checkId === 'inspection_valid' && claimedTypes.has('inspection_valid')))
+    // A seller claim that covers a check (the ad's "inspection valid") replaces the separate check item.
+    .filter((m) => !(MANDATORY_CLAIM_TYPES.has(m.checkId as SellerClaim['type']) && claimedTypes.has(m.checkId as SellerClaim['type'])))
     .map((m) => ({
       id: mandatoryItemId(m.checkId),
       origin: { kind: 'mandatory', checkId: m.checkId },

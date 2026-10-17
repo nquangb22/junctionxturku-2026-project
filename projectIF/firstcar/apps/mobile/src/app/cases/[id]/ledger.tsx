@@ -1,4 +1,4 @@
-import { isStale, itemTitle, type VerificationItem, type VerificationStatus } from '@firstcar/core';
+import { isMandatoryItem, isStale, itemTitle, type VerificationItem, type VerificationStatus } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { View } from 'react-native';
 
@@ -42,6 +42,7 @@ type ExtraBadge = { tone: StatusTone; label: string; icon?: string };
 
 function extraBadges(item: VerificationItem, t: Translate): ExtraBadge[] {
   const badges: ExtraBadge[] = [];
+  if (isMandatoryItem(item)) badges.push({ tone: 'info', label: t('ledger.mandatory') });
   if (item.criticality === 'critical') badges.push({ tone: 'neutral', label: t('criticality.critical') });
   if (item.acceptedRisk) badges.push({ tone: 'warning', label: t('ledger.acceptedRisk') });
   if (isStale(item)) badges.push({ tone: 'warning', icon: '⏱', label: t('ledger.due') });

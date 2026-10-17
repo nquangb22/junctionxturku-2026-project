@@ -165,6 +165,7 @@ export const fi: Record<MessageKey, string> = {
   'ledger.title': 'Kysymykset ja näyttö',
   'ledger.acceptedRisk': 'Hyväksytty riski',
   'ledger.due': 'Edessä',
+  'ledger.mandatory': 'Pakollinen',
   'ledger.redFlag': 'Varoitus',
 
   'item.adSays': 'Ilmoituksessa lukee',

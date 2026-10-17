@@ -1,4 +1,4 @@
-import { CLAIM_TITLES, quoteTranslationFor, type ClaimType, type ClaimValue, type SellerClaim } from '@firstcar/core';
+import { CLAIM_TITLES, MANDATORY_CLAIM_TYPES, quoteTranslationFor, type ClaimType, type ClaimValue, type SellerClaim } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -246,6 +246,7 @@ function ClaimRow({
         <Pressable accessibilityRole="button" onPress={onFocus} style={styles.claim}>
           <Txt variant="bodyStrong">{isOther ? claimTitle(claim, locale) : `${CLAIM_TITLES[claim.type][locale]}: ${describeValue(claim.value, t)}`}</Txt>
         </Pressable>
+        {MANDATORY_CLAIM_TYPES.has(claim.type) ? <Badge tone="info" label={t('ledger.mandatory')} /> : null}
         <StatusPill status="unchecked" t={t} />
       </View>
       {editing ? (

@@ -58,6 +58,9 @@ export const MANDATORY_CHECKS: MandatoryRule[] = [
   { checkId: 'safe_payment', criticality: 'important', minStrength: 'observed' },
 ];
 
+/** Seller claims that stand in for a mandatory check: the ad's own claim replaces the separate check item. */
+export const MANDATORY_CLAIM_TYPES: ReadonlySet<ClaimType> = new Set<ClaimType>(['inspection_valid']);
+
 export const STRENGTH_RANK: Record<EvidenceStrength, number> = {
   seller_statement: 0,
   observed: 1,
