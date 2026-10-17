@@ -11,7 +11,8 @@ import { makeT, type Translate } from '@/i18n';
 import { parseAppData } from '@/state/app-data';
 import { notify } from '@/ui/dialog';
 import { LockScreen, PrivacyCover, type VaultFailure } from '@/ui/lock-screen';
-import { authenticate, lockAvailability, RELOCK_AFTER_MS, type LockAvailability } from '@/vault/lock';
+import { methodName, primaryMethod } from '@/ui/unlock-method';
+import { authenticate, lockSupport, NO_LOCK, RELOCK_AFTER_MS, type LockAvailability, type LockSupport } from '@/vault/lock';
 import { DEFAULT_PREFS, loadPrefs, loadVault, savePrefs, wipeVault, type VaultPrefs } from '@/vault/vault';
 
 type Phase = 'booting' | 'locked' | 'ready' | VaultFailure;
@@ -19,7 +20,10 @@ type Phase = 'booting' | 'locked' | 'ready' | VaultFailure;
 interface Session {
   prefs: VaultPrefs;
   availability: LockAvailability;
+  support: LockSupport;
   t: Translate;
+  /** Asks for Face ID / fingerprint (or the passcode) right now; true when it succeeded. */
+  verifyUnlock(): Promise<boolean>;
   initialJson?: string;
   setPrefs(next: VaultPrefs): Promise<void>;
   wipeEverything(): Promise<void>;
@@ -36,7 +40,8 @@ export function useSession(): Session {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<Phase>('booting');
   const [prefs, setPrefsState] = useState<VaultPrefs>(DEFAULT_PREFS);
-  const [availability, setAvailability] = useState<LockAvailability>('none');
+  const [support, setSupport] = useState<LockSupport>(NO_LOCK);
+  const availability = support.availability;
   const [initialJson, setInitialJson] = useState<string | undefined>();
   const [lockError, setLockError] = useState<string | undefined>();
   const [relocked, setRelocked] = useState(false);
@@ -73,7 +78,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     unlocking.current = true;
     try {
       setLockError(undefined);
-      const res = await authenticate(t('lock.prompt'), t('common.cancel'));
+      const res = await authenticate(t('lock.prompt'), t('common.cancel'), t('lock.usePasscode'));
       if (!res.ok) {
         setLockError(t('lock.failed'));
         return;
@@ -98,11 +103,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const [p, a] = await Promise.all([loadPrefs(), lockAvailability()]);
+        const [p, s] = await Promise.all([loadPrefs(), lockSupport()]);
         if (cancelled) return;
         setPrefsState(p);
-        setAvailability(a);
-        if (lockRequired(p, a)) setPhase('locked');
+        setSupport(s);
+        if (lockRequired(p, s.availability)) setPhase('locked');
         else await openVault();
       } catch {
         if (!cancelled) setPhase('error');
@@ -170,10 +175,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await openVault();
   }, [openVault]);
 
-  const session: Session = { prefs, availability, t, initialJson, setPrefs, wipeEverything };
+  const verifyUnlock = useCallback(async () => {
+    const res = await authenticate(t('lock.unlockWith', { method: methodName(primaryMethod(support), t) }), t('common.cancel'), t('lock.usePasscode'));
+    return res.ok;
+  }, [support, t]);
+
+  const session: Session = { prefs, availability, support, t, initialJson, setPrefs, wipeEverything, verifyUnlock };
 
   if (phase === 'booting') return null;
-  if (phase === 'locked') return <LockScreen t={t} onUnlock={unlock} error={lockError} />;
+  if (phase === 'locked') return <LockScreen t={t} support={support} onUnlock={unlock} error={lockError} />;
   if (phase !== 'ready') return <LockScreen t={t} failure={phase} onRetry={retry} onReset={wipeEverything} />;
 
   const hidden = relocked || covered;
@@ -186,7 +196,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         aria-hidden={hidden}>
         {children}
       </View>
-      {relocked ? <LockScreen t={t} onUnlock={unlock} error={lockError} overlay /> : covered ? <PrivacyCover /> : null}
+      {relocked ? <LockScreen t={t} support={support} onUnlock={unlock} error={lockError} overlay /> : covered ? <PrivacyCover /> : null}
     </SessionContext.Provider>
   );
 }

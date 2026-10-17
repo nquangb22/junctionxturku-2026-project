@@ -26,6 +26,10 @@ const GLYPHS = {
   checkboxEmpty: 'square-outline',
   chevron: 'chevron-forward',
   settings: 'settings-outline',
+  faceId: 'scan-outline',
+  fingerprint: 'finger-print-outline',
+  iris: 'eye-outline',
+  passcode: 'keypad-outline',
 } as const satisfies Record<string, ComponentProps<typeof Ionicons>['name']>;
 
 export type IconName = keyof typeof GLYPHS;

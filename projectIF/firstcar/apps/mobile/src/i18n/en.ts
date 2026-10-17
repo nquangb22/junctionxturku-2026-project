@@ -284,7 +284,7 @@ export const en = {
 
   'settings.title': 'Settings',
   'settings.language': 'Language',
-  'settings.lock': 'Lock with Face ID / fingerprint',
+  'settings.lock': 'Lock the app',
   'settings.lockHint': 'Asks on start and after 5 minutes in the background.',
   'settings.lockUnavailable': 'No biometrics or passcode set on this device.',
   'settings.demo': 'Demo settings (for judges)',
@@ -408,6 +408,24 @@ export const en = {
   'settings.skipLockHint': 'Opens the app without Face ID or fingerprint while presenting.',
   'item.evidenceNote': 'What did you see, or what does the document say?',
   'insp.rustNote': 'rust seen on test drive',
+  'lock.method.faceId': 'Face ID',
+  'lock.method.touchId': 'Touch ID',
+  'lock.method.faceUnlock': 'face unlock',
+  'lock.method.fingerprint': 'fingerprint',
+  'lock.method.iris': 'iris scan',
+  'lock.method.passcode': 'device passcode',
+  'lock.unlockWith': 'Unlock with {method}',
+  'lock.usePasscode': 'Use passcode',
+  'settings.methods': 'Unlock methods on this phone',
+  'settings.methodReady': 'Ready to use',
+  'settings.methodNotEnrolled': 'Not set up yet: add it in the phone’s Settings',
+  'settings.methodUnsupported': 'Not available on this phone',
+  'settings.methodFallback': 'Used when biometrics fail or are not set up',
+  'settings.test': 'Try unlocking now',
+  'settings.testOk': 'Unlock works.',
+  'settings.testFailed': 'Unlocking did not succeed. Try again.',
+  'settings.enableFailed': 'The lock was not turned on because unlocking did not succeed.',
+  'settings.expoGoFaceId': 'Expo Go cannot use Face ID, so it asks for your passcode instead. Face ID works in the installed app.',
 } as const;
 
 export type MessageKey = keyof typeof en;
