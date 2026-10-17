@@ -33,7 +33,7 @@ export default function Ledger() {
           accessibilityLabel={[itemTitle(item, prefs.locale), t(`status.${item.status}`), ...extraBadges(item, t).map((b) => b.label)].join('. ')}
           tone={item.status === 'not_verified' ? 'danger' : undefined}
           onPress={() => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId: item.id } })}
-          right={<ItemBadges item={item} />}
+          below={<ItemBadges item={item} />}
           leading={thumbFor(itemPhoto(item.origin, c.listing.car))}
         />
       ))}
@@ -60,7 +60,7 @@ function extraBadges(item: VerificationItem, t: Translate): ExtraBadge[] {
 function ItemBadges({ item }: { item: VerificationItem }) {
   const { t } = useSession();
   return (
-    <View style={{ alignItems: 'flex-end', gap: Spacing.xs }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
       <StatusPill status={item.status} t={t} />
       {extraBadges(item, t).map((b) => (
         <Badge key={b.label} tone={b.tone} icon={b.icon} label={b.label} />

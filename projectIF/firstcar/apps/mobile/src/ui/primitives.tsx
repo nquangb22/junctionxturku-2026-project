@@ -232,6 +232,7 @@ export function NavCard({
   tone,
   accessibilityLabel,
   leading,
+  below,
 }: {
   title: string;
   subtitle?: string;
@@ -239,6 +240,8 @@ export function NavCard({
   right?: ReactNode;
   /** Shown before the title, e.g. a photo thumbnail. */
   leading?: ReactNode;
+  /** Shown under the title (badges): keeps the title full width on narrow phones. */
+  below?: ReactNode;
   tone?: StatusTone;
   accessibilityLabel?: string;
 }) {
@@ -255,6 +258,7 @@ export function NavCard({
       <View style={{ flex: 1, gap: Spacing.xs }}>
         <Txt variant="bodyStrong">{title}</Txt>
         {subtitle ? <Txt variant="small">{subtitle}</Txt> : null}
+        {below}
       </View>
       {right}
       <Icon name="chevron" size={20} color={p.textSecondary} />

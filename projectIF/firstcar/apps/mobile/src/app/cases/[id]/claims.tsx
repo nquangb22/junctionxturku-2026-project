@@ -249,11 +249,15 @@ function ClaimRow({
     <Card tone={focused ? 'info' : undefined}>
       <View style={styles.row}>
         {photo && !focused ? <PhotoThumb source={photo} /> : null}
-        <Pressable accessibilityRole="button" onPress={onFocus} style={styles.claim}>
-          <Txt variant="bodyStrong">{isOther ? claimTitle(claim, locale) : `${CLAIM_TITLES[claim.type][locale]}: ${describeValue(claim.value, t)}`}</Txt>
-        </Pressable>
-        {MANDATORY_CLAIM_TYPES.has(claim.type) ? <Badge tone="info" label={t('ledger.mandatory')} /> : null}
-        <StatusPill status="unchecked" t={t} />
+        <View style={styles.claim}>
+          <Pressable accessibilityRole="button" onPress={onFocus} style={styles.claimTitle}>
+            <Txt variant="bodyStrong">{isOther ? claimTitle(claim, locale) : `${CLAIM_TITLES[claim.type][locale]}: ${describeValue(claim.value, t)}`}</Txt>
+          </Pressable>
+          <View style={styles.badges}>
+            <StatusPill status="unchecked" t={t} />
+            {MANDATORY_CLAIM_TYPES.has(claim.type) ? <Badge tone="info" label={t('ledger.mandatory')} /> : null}
+          </View>
+        </View>
       </View>
       {photo && focused ? <ClaimPhoto source={photo} t={t} /> : null}
       {editing ? (
@@ -300,9 +304,10 @@ function ClaimRow({
 }
 
 const styles = StyleSheet.create({
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  claim: { flex: 1, minHeight: 48, justifyContent: 'center' },
+  claim: { flex: 1, minWidth: 0, gap: Spacing.xs },
+  claimTitle: { minHeight: 44, justifyContent: 'center' },
   input: { fontFamily: Fonts.regular, minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
 });
