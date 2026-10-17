@@ -1,4 +1,4 @@
-import { formatKm, mileageGap } from '@firstcar/core';
+import { formatEur, formatKm, mileageGap } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
@@ -11,7 +11,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { CaseProgress } from '@/ui/case-steps';
 import { IconLine } from '@/ui/icon';
-import { Button, Card, NavCard, Row, Screen, Section, Txt } from '@/ui/primitives';
+import { Badge, Button, Card, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
 
 const monthYear = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
@@ -92,10 +92,20 @@ export default function Registry() {
           </Card>
           {gap && reg.inspection ? (
             <Card tone="danger">
-              <Txt variant="bodyStrong">✕ {t('registry.conflict', { adKm: formatKm(gap.adKm), date: monthYear(reg.inspection.lastDate), regKm: formatKm(gap.registryKm) })}</Txt>
+              <IconLine icon="warning" variant="bodyStrong" color={p.danger}>
+                {t('registry.conflictTitle')}
+              </IconLine>
+              <Txt>{t('registry.conflict', { adKm: formatKm(gap.adKm), date: monthYear(reg.inspection.lastDate), regKm: formatKm(gap.registryKm) })}</Txt>
+              <Txt variant="bodyStrong">{t('registry.conflictDiff', { km: formatKm(gap.diffKm), pct: gap.pct, eur: formatEur(gap.total) })}</Txt>
+              {odometerItem?.acceptedRisk ? (
+                <Badge tone="warning" icon="check" label={t('registry.conflictAccepted')} />
+              ) : (
+                <Txt variant="small">{t('registry.conflictExplain')}</Txt>
+              )}
               {odometerItem ? (
-                <NavCard
-                  title={t('registry.conflictLink')}
+                <Button
+                  kind={odometerItem.acceptedRisk ? 'secondary' : 'primary'}
+                  label={t('registry.conflictLink')}
                   onPress={() => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId: odometerItem.id } })}
                 />
               ) : null}

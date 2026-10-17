@@ -312,7 +312,7 @@ export const en = {
   'insp.skip': 'Skip the inspection',
   'insp.skipConfirm': 'Items that need an inspection stay open and still show on the Decide step.',
   'registry.conflict': 'Conflict: the ad says {adKm}, the inspection on {date} recorded {regKm}.',
-  'registry.conflictLink': 'Open the mileage check',
+  'registry.conflictLink': 'Decide what to do about the mileage',
   'mileage.title': 'What the real mileage means for you',
   'mileage.value': 'Value: about {amount} less than a car with {adKm} ({diffKm} × {perKm} €/km, team assumption).',
   'mileage.belt': 'Timing belt: due at {km} and now passed, about {amount}.',
@@ -424,6 +424,10 @@ export const en = {
   'lock.bannedHint': 'Each further failed attempt makes the wait longer.',
   'lock.bannedButton': 'Locked · {time}',
   'case.progress': 'Step {n} of {total}: {step}',
+  'registry.conflictTitle': 'The mileage does not match the registry',
+  'registry.conflictDiff': '{km} more than the ad (+{pct} %) · about {eur} in extra cost or lower value.',
+  'registry.conflictExplain': 'The registry is the official record, so the seller’s mileage cannot be confirmed: it is now marked Not verified. You do not have to fix it here. Next, see what it means for you and ask the seller, or accept the risk if you still want the car.',
+  'registry.conflictAccepted': 'You accepted this risk. It stays in your contract as Disputed.',
 } as const;
 
 export type MessageKey = keyof typeof en;

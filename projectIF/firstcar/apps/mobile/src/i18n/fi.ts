@@ -314,7 +314,7 @@ export const fi: Record<MessageKey, string> = {
   'insp.skip': 'Ohita tarkastus',
   'insp.skipConfirm': 'Tarkastusta vaativat kohdat jäävät avoimiksi ja näkyvät yhä Päätä-vaiheessa.',
   'registry.conflict': 'Ristiriita: ilmoituksessa {adKm}, katsastuksessa {date} kirjattiin {regKm}.',
-  'registry.conflictLink': 'Avaa mittarilukeman tarkistus',
+  'registry.conflictLink': 'Päätä, mitä teet lukemalle',
   'mileage.title': 'Mitä todellinen ajomäärä merkitsee sinulle',
   'mileage.value': 'Arvo: noin {amount} vähemmän kuin autolla, jolla on ajettu {adKm} ({diffKm} × {perKm} €/km, tiimin oletus).',
   'mileage.belt': 'Jakohihna: vaihto {km} kohdalla on jo ohitettu, noin {amount}.',
@@ -426,4 +426,8 @@ export const fi: Record<MessageKey, string> = {
   'lock.bannedHint': 'Jokainen uusi epäonnistunut yritys pidentää odotusta.',
   'lock.bannedButton': 'Lukittu · {time}',
   'case.progress': 'Vaihe {n}/{total}: {step}',
+  'registry.conflictTitle': 'Mittarilukema ei täsmää rekisteriin',
+  'registry.conflictDiff': '{km} enemmän kuin ilmoituksessa (+{pct} %) · noin {eur} lisäkuluja tai alempi arvo.',
+  'registry.conflictExplain': 'Rekisteri on virallinen tieto, joten myyjän ilmoittamaa lukemaa ei voi vahvistaa: se on nyt merkitty ei vahvistetuksi. Sitä ei tarvitse korjata tässä. Katso seuraavaksi, mitä se tarkoittaa sinulle, ja kysy myyjältä, tai hyväksy riski, jos haluat silti auton.',
+  'registry.conflictAccepted': 'Hyväksyit tämän riskin. Se näkyy sopimuksessa kiistanalaisena.',
 };
