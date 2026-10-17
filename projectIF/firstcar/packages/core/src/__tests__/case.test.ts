@@ -234,6 +234,55 @@ describe('gate and red flags', () => {
   });
 });
 
+describe('adding claims after the review', () => {
+  const late: CaseEvent = { type: 'claim_added', claimType: 'clutch', value: { kind: 'text', text: 'Clutch replaced last year' }, quote: 'Said on the phone: clutch replaced last year' };
+
+  it('puts a late claim straight onto the checklist without changing the step', () => {
+    const checking = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const after = apply(checking, late);
+
+    const added = after.claims.at(-1)!;
+    expect(added).toMatchObject({ type: 'clutch', extractor: 'user' });
+    expect(after.items).toHaveLength(checking.items.length + 1);
+    expect(item(after, `claim:${added.id}`)).toMatchObject({ status: 'unchecked', origin: { kind: 'claim', claimType: 'clutch' } });
+    expect(after.status).toBe('checking');
+  });
+
+  it('keeps editing and removing locked once the claims are confirmed', () => {
+    const checking = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = checking.claims[0]!.id;
+    expect(applyEvent(checking, { type: 'claim_edited', claimId: id, quote: 'changed' }, ctx)).toEqual({ ok: false, error: 'claims_locked' });
+    expect(applyEvent(checking, { type: 'claim_removed', claimId: id }, ctx)).toEqual({ ok: false, error: 'claims_locked' });
+  });
+
+  it('a critical claim added at ready_to_buy gets an item and a contract clause, and the gate is re-checked', () => {
+    let c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' }, { type: 'registry_result', registry: registry('XYZ-789') });
+    c = apply(
+      c,
+      { type: 'owner_compared', sellerNameFromId: 'Anna Esimerkki' },
+      { type: 'vin_confirmed', matches: true },
+      { type: 'payment_confirmed', safe: true },
+      { type: 'start_inspection' },
+      { type: 'test_drive_done' },
+      { type: 'inspection_result', outcomes: { [claimItem(c, 'no_accidents').id]: 'ok' } },
+      { type: 'start_contract' },
+      { type: 'mark_ready' },
+    );
+    expect(c.status).toBe('ready_to_buy');
+
+    const after = apply(c, { type: 'claim_added', claimType: 'known_defects', value: { kind: 'text', text: 'AC does not work' }, quote: 'Seller at the viewing: the AC does not work' });
+
+    const itemId = `claim:${after.claims.at(-1)!.id}`;
+    expect(item(after, itemId).status).toBe('unchecked');
+    expect(after.status).toBe(evaluateGate(after).passes ? 'ready_to_buy' : 'contract_prep');
+  });
+
+  it('refuses new claims once the car is bought', () => {
+    const bought: PurchaseCase = { ...apply(newCase('corolla-clean'), { type: 'claims_confirmed' }), status: 'bought' };
+    expect(applyEvent(bought, late, ctx)).toEqual({ ok: false, error: 'claims_locked' });
+  });
+});
+
 describe('transition guards', () => {
   const draft = newCase('corolla-clean');
 

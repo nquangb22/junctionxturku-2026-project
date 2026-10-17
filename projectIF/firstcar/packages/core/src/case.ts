@@ -213,10 +213,16 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
     }
 
     case 'claim_added': {
-      if (!inReview) return fail('claims_locked');
+      // Sellers keep making claims after the first review (on the phone, at the viewing), so adding stays open
+      // until the purchase. Editing and removing do not: confirmed claims may already carry evidence.
+      if (!inReview && !ledgerOpen) return fail('claims_locked');
       const id = nextNumericId(c.claims.map((cl) => cl.id), 'u');
       const claim = withQuoteTranslation({ id, type: e.claimType, value: e.value, quote: e.quote, quoteStart: Number.MAX_SAFE_INTEGER, extractor: 'user' as const, confidence: 'high' as const });
-      return bump(c, { ...c, claims: [...c.claims, claim] }, ctx);
+      const withClaim = { ...c, claims: [...c.claims, claim] };
+      if (inReview) return bump(c, withClaim, ctx);
+      // Already confirmed: the claim goes straight onto the checklist. settle() steps a passed gate back if needed.
+      const newItems = buildItems([claim], c.listing.car, ctx.now).filter((i) => i.origin.kind === 'claim');
+      return bump(c, settle({ ...withClaim, items: [...c.items, ...newItems] }, ctx), ctx);
     }
 
     case 'claims_confirmed': {

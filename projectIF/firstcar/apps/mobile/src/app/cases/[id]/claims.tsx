@@ -16,6 +16,8 @@ import { QuoteHighlight, QuoteTranslation, StatusPill } from '@/ui/status';
 const ADDABLE: ClaimType[] = ['service_history', 'timing_belt', 'clutch', 'no_rust', 'no_accidents', 'tyres_included', 'known_defects', 'other'];
 /** These may appear more than once; every other type is one claim per ad. */
 const REPEATABLE = new Set<ClaimType>(['known_defects', 'other']);
+/** After the review, claims can still be added (not edited or removed) until the car is bought. Mirrors core LEDGER_OPEN. */
+const ADD_LATER = new Set(['checking', 'inspecting', 'contract_prep', 'ready_to_buy']);
 
 /** "Other" claims are titled by what the buyer typed, not by the generic type name. */
 const claimTitle = (cl: SellerClaim, locale: 'en' | 'fi') => (cl.type === 'other' && cl.value.kind === 'text' ? cl.value.text : CLAIM_TITLES[cl.type][locale]);
@@ -41,6 +43,7 @@ export default function ClaimsReview() {
 
   if (!c) return <Redirect href="/" />;
   const editable = c.status === 'reviewing_claims';
+  const addOpen = editable || ADD_LATER.has(c.status);
   const present = new Set(c.claims.map((cl) => cl.type));
   const needsTitle = addType === 'other';
   const canAdd = !!addType && !!addNote.trim() && (!needsTitle || !!addTitle.trim());
@@ -132,8 +135,9 @@ export default function ClaimsReview() {
         ))}
       </Section>
 
-      {editable ? (
+      {addOpen ? (
         <Section title={t('claims.add')}>
+          {!editable ? <Txt variant="small">{t('claims.addLaterHint')}</Txt> : null}
           <Choice
             label={t('claims.add')}
             value={addType}

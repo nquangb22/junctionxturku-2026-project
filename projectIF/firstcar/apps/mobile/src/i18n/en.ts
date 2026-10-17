@@ -117,6 +117,7 @@ export const en = {
   'claims.remove': 'Remove',
   'claims.add': 'Add another claim',
   'claims.addNote': 'What did the seller say?',
+  'claims.addLaterHint': 'Heard something new from the seller? Add it here. It goes straight onto your checklist.',
   'claims.addButton': 'Add',
   'claims.confirm': 'Looks right, start checking',
   'claims.none': 'No claims found. Add the ones you see.',
