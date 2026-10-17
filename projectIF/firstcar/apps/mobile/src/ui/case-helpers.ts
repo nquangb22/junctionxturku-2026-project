@@ -81,4 +81,9 @@ export function carForCase(c: PurchaseCase): CarSpec | undefined {
 }
 
 /** Day-month-year dates in the app language (fi: 17.3.2027, en: 17/03/2027). */
+/** The note the inspection screen stores with a rust finding. Stored in English, shown in the UI language. */
+export const RUST_NOTE = 'rust seen on test drive';
+
+export const noteText = (note: string, t: Translate) => (note === RUST_NOTE ? t('insp.rustNote') : note);
+
 export const formatDate = (iso: string, locale: Locale) => new Date(iso).toLocaleDateString(locale === 'fi' ? 'fi-FI' : 'en-GB');

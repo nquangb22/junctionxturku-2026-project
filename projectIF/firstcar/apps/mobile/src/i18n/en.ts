@@ -123,7 +123,7 @@ export const en = {
   'claims.none': 'No claims found. Add the ones you see.',
   'claims.notChecked': 'Not checked yet',
   'claims.adText': 'The ad',
-  'seller.dealer': 'Dealer: consumer protection applies ⚠️',
+  'seller.dealer': 'Dealer: consumer protection applies',
   'seller.unknown': 'Seller type unknown',
 
   'case.steps': 'Steps',
@@ -255,7 +255,7 @@ export const en = {
   'decide.notInStep': 'Finish the earlier steps first.',
 
   'insure.title': 'Insurance & registration',
-  'insure.mandatory': 'You now need motor liability insurance before you drive it home. Register the ownership change within 7 days ⚠️.',
+  'insure.mandatory': 'You now need motor liability insurance before you drive it home. Register the ownership change within 7 days.',
   'insure.neutral': 'Any insurer can provide motor liability insurance. This demo asks If for a quote.',
   'insure.payloadTitle': 'Exactly what will be shared with If',
   'insure.notShared': 'Never shared: income, savings, your checks, evidence, seller details.',
@@ -407,6 +407,7 @@ export const en = {
   'settings.llmMockHint': 'Uses prepared AI answers for the demo ads instead of calling an AI service.',
   'settings.skipLockHint': 'Opens the app without Face ID or fingerprint while presenting.',
   'item.evidenceNote': 'What did you see, or what does the document say?',
+  'insp.rustNote': 'rust seen on test drive',
 } as const;
 
 export type MessageKey = keyof typeof en;

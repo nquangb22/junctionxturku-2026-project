@@ -71,7 +71,7 @@ export default function Decide() {
 
       {bought ? (
         <Card tone="warning">
-          <Txt variant="h2">{t('insure.mandatory')}</Txt>
+          <IconLine icon="warning" variant="bodyStrong">{t('insure.mandatory')}</IconLine>
           <Button label={t('case.step.insure')} onPress={() => router.push({ pathname: '/cases/[id]/insure', params: { id: c.id } })} />
         </Card>
       ) : gate.passes ? (

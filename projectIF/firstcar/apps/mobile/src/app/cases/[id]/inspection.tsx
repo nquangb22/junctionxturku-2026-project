@@ -8,6 +8,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { RUST_NOTE } from '@/ui/case-helpers';
 import { confirmAction, notify } from '@/ui/dialog';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
@@ -67,7 +68,7 @@ export default function Inspection() {
     const rustIssue = drive.rust_check === 'issue';
     const rustItems = plan.testDrive.find((x) => x.id === 'rust_check')?.linkedItemIds ?? [];
     const rustAlreadyNoted = c.evidence.some((e) => e.kind === 'test_drive_note' && e.outcome === 'contradicts' && rustItems.every((id) => e.itemIds.includes(id)));
-    if (rustIssue && rustItems.length && !rustAlreadyNoted) events.push({ type: 'evidence_added', kind: 'test_drive_note', itemIds: rustItems, outcome: 'contradicts', note: 'rust seen on test drive' });
+    if (rustIssue && rustItems.length && !rustAlreadyNoted) events.push({ type: 'evidence_added', kind: 'test_drive_note', itemIds: rustItems, outcome: 'contradicts', note: RUST_NOTE });
     events.push({ type: 'test_drive_done', answers: drive });
     for (const event of events) {
       const err = caseEvent(c.id, event);

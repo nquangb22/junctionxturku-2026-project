@@ -90,7 +90,7 @@ export default function ClaimsReview() {
       <Txt>{t('claims.body')}</Txt>
       <View style={styles.badges}>
         <Badge tone="info" label={t(`claims.extractor.${c.listing.extractor}`)} />
-        {c.listing.sellerType !== 'private' ? <Badge tone="neutral" label={t(`seller.${c.listing.sellerType}`)} /> : null}
+        {c.listing.sellerType !== 'private' ? <Badge tone={c.listing.sellerType === 'dealer' ? 'warning' : 'neutral'} icon={c.listing.sellerType === 'dealer' ? 'warning' : undefined} label={t(`seller.${c.listing.sellerType}`)} /> : null}
       </View>
       {c.listing.sellerType === 'private' ? (
         <Card tone="info">

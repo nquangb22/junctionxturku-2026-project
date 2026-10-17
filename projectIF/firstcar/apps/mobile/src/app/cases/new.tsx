@@ -15,7 +15,7 @@ import { IconLine } from '@/ui/icon';
 import { Button, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function NewCase() {
-  const { t } = useSession();
+  const { t, prefs } = useSession();
   const { data, addCase } = useStore();
   const p = usePalette();
   const [text, setText] = useState('');
@@ -82,7 +82,7 @@ export default function NewCase() {
       ) : null}
       <IconLine icon="lock" variant="caption">{t('new.redactNote')}</IconLine>
       <Section title={t('new.demo')}>
-        <Choice label={t('new.demo')} value={demoId} onChange={pickDemo} options={DEMO_ADS.map((a) => ({ value: a.id, label: a.label }))} />
+        <Choice label={t('new.demo')} value={demoId} onChange={pickDemo} options={DEMO_ADS.map((a) => ({ value: a.id, label: a.label[prefs.locale] }))} />
       </Section>
     </Screen>
   );

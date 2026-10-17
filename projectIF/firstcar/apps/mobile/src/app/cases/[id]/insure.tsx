@@ -91,7 +91,7 @@ export default function Insure() {
     <Screen>
       <Stack.Screen options={{ title: t('insure.title') }} />
       <Card tone="warning">
-        <Txt variant="h2">{t('insure.mandatory')}</Txt>
+        <IconLine icon="warning" variant="bodyStrong">{t('insure.mandatory')}</IconLine>
         {deadline ? <Txt variant="bodyStrong">{t('insure.deadline', { date: formatDate(deadline, prefs.locale) })}</Txt> : null}
       </Card>
       <Card>

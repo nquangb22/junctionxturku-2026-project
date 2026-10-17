@@ -25,6 +25,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { noteText } from '@/ui/case-helpers';
 import { IconLine } from '@/ui/icon';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { confirmAction } from '@/ui/dialog';
@@ -283,7 +284,7 @@ function EvidenceRow({ e }: { e: Evidence }) {
       </Txt>
       <Txt variant="caption">
         {t(`strength.${e.strength}`)} · {e.capturedAt.slice(0, 10)}
-        {e.note ? ` · ${e.note}` : ''}
+        {e.note ? ` · ${noteText(e.note, t)}` : ''}
       </Txt>
     </Card>
   );

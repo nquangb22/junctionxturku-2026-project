@@ -125,7 +125,7 @@ export const fi: Record<MessageKey, string> = {
   'claims.none': 'Väitteitä ei löytynyt. Lisää ne, jotka näet.',
   'claims.notChecked': 'Ei tarkistettu',
   'claims.adText': 'Ilmoitus',
-  'seller.dealer': 'Autoliike: kuluttajansuojalaki koskee kauppaa ⚠️',
+  'seller.dealer': 'Autoliike: kuluttajansuojalaki koskee kauppaa',
   'seller.unknown': 'Myyjän tyyppi ei tiedossa',
 
   'case.steps': 'Vaiheet',
@@ -257,7 +257,7 @@ export const fi: Record<MessageKey, string> = {
   'decide.notInStep': 'Tee ensin aiemmat vaiheet.',
 
   'insure.title': 'Vakuutus ja rekisteröinti',
-  'insure.mandatory': 'Tarvitset nyt liikennevakuutuksen ennen kuin ajat auton kotiin. Tee omistajanvaihdos 7 päivän kuluessa ⚠️.',
+  'insure.mandatory': 'Tarvitset nyt liikennevakuutuksen ennen kuin ajat auton kotiin. Tee omistajanvaihdos 7 päivän kuluessa.',
   'insure.neutral': 'Kuka tahansa vakuutusyhtiö voi myöntää liikennevakuutuksen. Tämä demo pyytää tarjouksen If:ltä.',
   'insure.payloadTitle': 'Täsmälleen nämä tiedot jaetaan Ifille',
   'insure.notShared': 'Ei koskaan jaeta: tulot, säästöt, tarkistuksesi, näytöt, myyjän tiedot.',
@@ -409,4 +409,5 @@ export const fi: Record<MessageKey, string> = {
   'settings.llmMockHint': 'Käyttää demoilmoituksille valmiita tekoälyvastauksia tekoälypalvelun kutsumisen sijaan.',
   'settings.skipLockHint': 'Avaa sovelluksen ilman Face ID:tä tai sormenjälkeä esityksen aikana.',
   'item.evidenceNote': 'Mitä näit, tai mitä asiakirjassa lukee?',
+  'insp.rustNote': 'ruostetta nähty koeajolla',
 };
