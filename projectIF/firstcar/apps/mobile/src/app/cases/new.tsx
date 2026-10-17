@@ -6,11 +6,12 @@ import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
 import { extractClaims } from '@/adapters';
-import { Radius, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { notify } from '@/ui/dialog';
+import { IconLine } from '@/ui/icon';
 import { Button, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function NewCase() {
@@ -72,14 +73,14 @@ export default function NewCase() {
         multiline
         maxLength={MAX_AD_CHARS}
         accessibilityLabel={t('new.placeholder')}
-        style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+        style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
       />
       {error ? (
         <Txt color={p.danger} accessibilityLiveRegion="polite">
           {error}
         </Txt>
       ) : null}
-      <Txt variant="caption">🔒 {t('new.redactNote')}</Txt>
+      <IconLine icon="lock" variant="caption">{t('new.redactNote')}</IconLine>
       <Section title={t('new.demo')}>
         <Choice label={t('new.demo')} value={demoId} onChange={pickDemo} options={DEMO_ADS.map((a) => ({ value: a.id, label: a.label }))} />
       </Section>
@@ -88,5 +89,5 @@ export default function NewCase() {
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 200, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15, lineHeight: 22, textAlignVertical: 'top' },
+  input: { fontFamily: Fonts.regular, minHeight: 200, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15, lineHeight: 22, textAlignVertical: 'top' },
 });

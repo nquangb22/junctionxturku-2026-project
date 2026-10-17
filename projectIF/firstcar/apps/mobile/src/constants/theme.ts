@@ -4,54 +4,81 @@
  */
 import type { VerdictLevel, VerificationStatus } from '@firstcar/core';
 
+import type { IconName } from '@/ui/icon';
+
+/**
+ * Warm palette after If's design system (if.fi "IDS"): cream backgrounds, dark-brown text, one strong blue for
+ * actions. Status colours are If's feedback/alert pairs.
+ */
 export const Colors = {
   light: {
-    text: '#111418',
-    textSecondary: '#555D68',
-    background: '#F6F7F9',
+    text: '#331E11',
+    textSecondary: '#6E625E',
+    background: '#FAF9F7',
     surface: '#FFFFFF',
-    surfaceAlt: '#EEF0F3',
-    border: '#D9DDE3',
-    primary: '#1F5FD6',
+    surfaceAlt: '#F1ECE8',
+    border: '#E8E0D9',
+    borderStrong: '#D6CEC8',
+    primary: '#0054F0',
+    primaryPressed: '#1241A2',
+    primarySoft: '#E1E9F6',
     onPrimary: '#FFFFFF',
-    danger: '#B42318',
-    dangerBg: '#FDECEA',
-    warning: '#8A5300',
-    warningBg: '#FFF4DE',
-    success: '#1B6E3A',
-    successBg: '#E5F5EA',
-    info: '#2E4A7D',
-    infoBg: '#E8EEFA',
-    neutralBg: '#EEF0F3',
-    highlight: '#FFE9A8',
+    disabledBg: '#B7AEA8',
+    danger: '#BB320C',
+    dangerPressed: '#812308',
+    dangerBg: '#F9E3D4',
+    warning: '#7A4A00',
+    warningBg: '#F9EBC7',
+    success: '#217331',
+    successBg: '#E0F0DB',
+    info: '#1241A2',
+    infoBg: '#E1E9F6',
+    neutralBg: '#F1ECE8',
+    highlight: '#F6DB8E',
+    hero: '#F1ECE8',
   },
   dark: {
-    text: '#F2F4F7',
-    textSecondary: '#AAB2BD',
-    background: '#0E1114',
-    surface: '#181C21',
-    surfaceAlt: '#22272E',
-    border: '#333A43',
-    primary: '#7AA7FF',
-    onPrimary: '#0E1114',
-    danger: '#FF8A80',
-    dangerBg: '#3A1714',
-    warning: '#FFC266',
-    warningBg: '#3A2A0D',
-    success: '#7BD99A',
-    successBg: '#12301D',
-    info: '#A9C2F2',
-    infoBg: '#1A2638',
-    neutralBg: '#22272E',
+    text: '#FAF9F7',
+    textSecondary: '#B7AEA8',
+    background: '#1B120C',
+    surface: '#271B13',
+    surfaceAlt: '#33251B',
+    border: '#3F3026',
+    borderStrong: '#5A4A3F',
+    primary: '#8DB0F5',
+    primaryPressed: '#A8C2F0',
+    primarySoft: '#1E2B45',
+    onPrimary: '#1B120C',
+    disabledBg: '#6E625E',
+    danger: '#F1B398',
+    dangerPressed: '#F9E3D4',
+    dangerBg: '#3E1D10',
+    warning: '#F2C86A',
+    warningBg: '#3A2B0F',
+    success: '#9BD3A5',
+    successBg: '#17301D',
+    info: '#A8C2F0',
+    infoBg: '#1E2B45',
+    neutralBg: '#33251B',
     highlight: '#5C4A12',
+    hero: '#33251B',
   },
 } as const;
 
 export type Palette = { [K in keyof typeof Colors.light]: string };
 
 export const Spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
-export const Radius = { sm: 8, md: 12, lg: 16, pill: 999 } as const;
+/** If's radii: small details 4, buttons and inputs 6, cards 12. */
+export const Radius = { sm: 4, md: 6, lg: 12, pill: 999 } as const;
 export const MaxContentWidth = 720;
+
+/** Figtree stands in for If Sans (proprietary). Custom fonts pick weight by family, never by fontWeight. */
+export const Fonts = {
+  regular: 'Figtree_400Regular',
+  medium: 'Figtree_500Medium',
+  semibold: 'Figtree_600SemiBold',
+  bold: 'Figtree_700Bold',
+} as const;
 
 export type StatusTone = 'success' | 'danger' | 'warning' | 'info' | 'neutral';
 
@@ -63,12 +90,12 @@ export const STATUS_TONE: Record<VerificationStatus, StatusTone> = {
   unchecked: 'neutral',
 };
 
-export const STATUS_ICON: Record<VerificationStatus, string> = {
-  verified: '✓',
-  not_verified: '✕',
-  needs_inspection: '🔧',
-  awaiting_evidence: '…',
-  unchecked: '○',
+export const STATUS_ICON: Record<VerificationStatus, IconName> = {
+  verified: 'check',
+  not_verified: 'cross',
+  needs_inspection: 'wrench',
+  awaiting_evidence: 'clock',
+  unchecked: 'circle',
 };
 
 export function toneColors(p: Palette, tone: StatusTone): { fg: string; bg: string } {

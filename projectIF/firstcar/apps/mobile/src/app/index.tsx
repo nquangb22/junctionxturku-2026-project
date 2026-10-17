@@ -6,7 +6,7 @@ import { Platform, View } from 'react-native';
 import { Spacing, VERDICT_TONE, type StatusTone } from '@/constants/theme';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
-import { Badge, Button, NavCard, Screen, Section, Txt } from '@/ui/primitives';
+import { Badge, Button, Hero, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 import { caseCounts, caseTitle } from '@/ui/case-helpers';
 import { confirmAction } from '@/ui/dialog';
 
@@ -36,10 +36,9 @@ export default function Home() {
   return (
     <Screen>
       <Stack.Screen options={{ title: t('appName'), headerRight: () => <Button kind="ghost" label={t('home.settings')} onPress={() => router.push('/settings')} /> }} />
-      <Txt variant="title" accessibilityRole="header">
-        {t('home.tagline')}
-      </Txt>
-      {Platform.OS === 'web' ? <Badge tone="warning" icon="⚠️" label={t('home.privacyWeb')} /> : <Badge tone="success" icon="🔒" label={t('home.privacy')} />}
+      <Hero icon="car" title={t('home.tagline')}>
+        {Platform.OS === 'web' ? <Badge tone="warning" icon="warning" label={t('home.privacyWeb')} /> : <Badge tone="success" icon="lock" label={t('home.privacy')} />}
+      </Hero>
 
       <NavCard
         title={t('home.readyTitle')}

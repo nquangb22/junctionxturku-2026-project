@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
-import { Button, Card, Choice, Screen, Txt } from '@/ui/primitives';
+import { IconLine } from '@/ui/icon';
+import { Button, Card, Choice, Hero, Screen } from '@/ui/primitives';
 
 export default function Welcome() {
   const { t, prefs, setPrefs } = useSession();
@@ -26,17 +27,15 @@ export default function Welcome() {
           { value: 'fi', label: 'Suomi' },
         ]}
       />
-      <Txt variant="title" accessibilityRole="header">
-        {t('welcome.title')}
-      </Txt>
+      <Hero icon="shield" title={t('welcome.title')} />
       <Card>
-        <Txt>🔒 {t(Platform.OS === 'web' ? 'welcome.p1Web' : 'welcome.p1')}</Txt>
+        <IconLine icon="lock">{t(Platform.OS === 'web' ? 'welcome.p1Web' : 'welcome.p1')}</IconLine>
       </Card>
       <Card>
-        <Txt>🤖 {t('welcome.p2')}</Txt>
+        <IconLine icon="sparkles">{t('welcome.p2')}</IconLine>
       </Card>
       <Card>
-        <Txt>⚖️ {t('welcome.p3')}</Txt>
+        <IconLine icon="scale">{t('welcome.p3')}</IconLine>
       </Card>
     </Screen>
   );

@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MaxContentWidth, Radius, Spacing, toneColors, type StatusTone } from '@/constants/theme';
+import { Fonts, MaxContentWidth, Radius, Spacing, toneColors, type StatusTone } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
+import { Icon, type IconName } from '@/ui/icon';
 
 /* ---------- text ---------- */
 
@@ -49,7 +50,7 @@ export function Card({ children, style, tone }: { children: ReactNode; style?: S
   const p = usePalette();
   const toned = tone ? toneColors(p, tone) : undefined;
   return (
-    <View style={[styles.card, { backgroundColor: toned?.bg ?? p.surface, borderColor: toned ? toned.fg : p.border }, style]}>
+    <View style={[styles.card, { backgroundColor: toned?.bg ?? p.surface, borderColor: toned ? `${toned.fg}33` : p.border }, style]}>
       {children}
     </View>
   );
@@ -82,6 +83,23 @@ export function Row({ label, value, hint }: { label: string; value: string; hint
   );
 }
 
+/** A soft beige panel that opens a screen: icon, headline and an optional line under it. */
+export function Hero({ icon, title, body, children }: { icon: IconName; title: string; body?: string; children?: ReactNode }) {
+  const p = usePalette();
+  return (
+    <View style={[styles.hero, { backgroundColor: p.hero }]}>
+      <View style={[styles.heroIcon, { backgroundColor: p.surface }]}>
+        <Icon name={icon} size={28} color={p.primary} />
+      </View>
+      <Txt variant="title" accessibilityRole="header">
+        {title}
+      </Txt>
+      {body ? <Txt color={p.textSecondary}>{body}</Txt> : null}
+      {children}
+    </View>
+  );
+}
+
 export const Gap = ({ size = Spacing.md }: { size?: number }) => <View style={{ height: size }} />;
 
 /* ---------- controls ---------- */
@@ -104,9 +122,12 @@ export function Button({
   accessibilityHint?: string;
 }) {
   const p = usePalette();
-  const bg = kind === 'primary' ? p.primary : kind === 'danger' ? p.danger : 'transparent';
-  const fg = kind === 'primary' ? p.onPrimary : kind === 'danger' ? p.onPrimary : kind === 'secondary' ? p.primary : p.primary;
   const inactive = disabled || loading;
+  const filled = kind === 'primary' || kind === 'danger';
+  const pressedBg = kind === 'primary' ? p.primaryPressed : kind === 'danger' ? p.dangerPressed : p.primarySoft;
+  const restBg = kind === 'primary' ? p.primary : kind === 'danger' ? p.danger : 'transparent';
+  // If-style disabled: a flat grey fill (filled) or grey outline, not a faded copy of the live button.
+  const fg = disabled && !loading ? (filled ? p.onPrimary : p.textSecondary) : filled ? p.onPrimary : p.primary;
   return (
     <Pressable
       accessibilityRole="button"
@@ -117,7 +138,11 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: bg, borderColor: kind === 'secondary' ? p.primary : 'transparent', opacity: inactive ? 0.5 : pressed ? 0.8 : 1 },
+        kind === 'ghost' ? styles.ghost : null,
+        {
+          backgroundColor: disabled && !loading && filled ? p.disabledBg : pressed ? pressedBg : restBg,
+          borderColor: kind === 'secondary' ? (disabled ? p.borderStrong : p.primary) : 'transparent',
+        },
       ]}>
       {loading ? <ActivityIndicator color={fg} /> : <Text style={[styles.buttonText, { color: fg }]}>{label}</Text>}
     </Pressable>
@@ -158,8 +183,9 @@ export function Choice<T extends string | number | boolean>({
             aria-checked={selected}
             disabled={off}
             onPress={() => onChange(o.value)}
-            style={[styles.chip, { backgroundColor: selected ? p.primary : p.surface, borderColor: selected ? p.primary : p.border, opacity: off && !selected ? 0.5 : 1 }]}>
-            <Text style={[styles.chipText, { color: selected ? p.onPrimary : p.text }]}>{o.label}</Text>
+            style={[styles.chip, { backgroundColor: selected ? p.primarySoft : p.surface, borderColor: selected ? p.primary : p.borderStrong, opacity: off && !selected ? 0.5 : 1 }]}>
+            {selected ? <Icon name="check" size={18} color={p.primary} /> : null}
+            <Text style={[styles.chipText, { color: selected ? p.primary : p.text, fontFamily: selected ? Fonts.semibold : Fonts.medium }]}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -190,51 +216,54 @@ export function NavCard({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? (subtitle ? `${title}. ${subtitle}` : title)}
       onPress={onPress}
-      style={({ pressed }) => [styles.card, styles.navCard, { backgroundColor: toned?.bg ?? p.surface, borderColor: toned?.fg ?? p.border, opacity: pressed ? 0.85 : 1 }]}>
+      style={({ pressed }) => [styles.card, styles.navCard, { backgroundColor: pressed ? p.surfaceAlt : (toned?.bg ?? p.surface), borderColor: toned ? `${toned.fg}33` : p.border }]}>
       <View style={{ flex: 1, gap: Spacing.xs }}>
         <Txt variant="bodyStrong">{title}</Txt>
         {subtitle ? <Txt variant="small">{subtitle}</Txt> : null}
       </View>
       {right}
-      <Txt variant="h2" color={p.textSecondary} importantForAccessibility="no">
-        ›
-      </Txt>
+      <Icon name="chevron" size={20} color={p.textSecondary} />
     </Pressable>
   );
 }
 
 /* ---------- badges ---------- */
 
-export function Badge({ label, tone, icon }: { label: string; tone: StatusTone; icon?: string }) {
+export function Badge({ label, tone, icon }: { label: string; tone: StatusTone; icon?: IconName }) {
   const p = usePalette();
   const c = toneColors(p, tone);
   return (
-    <View style={[styles.badge, { backgroundColor: c.bg, borderColor: c.fg }]} accessible accessibilityLabel={label}>
-      <Text style={[styles.badgeText, { color: c.fg }]}>{icon ? `${icon} ${label}` : label}</Text>
+    <View style={[styles.badge, { backgroundColor: c.bg }]} accessible accessibilityLabel={label}>
+      {icon ? <Icon name={icon} size={15} color={c.fg} /> : null}
+      <Text style={[styles.badgeText, { color: c.fg }]}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  h2: { fontSize: 20, lineHeight: 26, fontWeight: '700' },
-  body: { fontSize: 16, lineHeight: 23 },
-  bodyStrong: { fontSize: 16, lineHeight: 23, fontWeight: '600' },
-  small: { fontSize: 14, lineHeight: 20 },
-  caption: { fontSize: 13, lineHeight: 18 },
-  screen: { padding: Spacing.lg, alignItems: 'center' },
-  column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.md },
+  // If-style type: large, medium-weight headings; regular body text.
+  title: { fontFamily: Fonts.semibold, fontSize: 30, lineHeight: 38, letterSpacing: -0.4 },
+  h2: { fontFamily: Fonts.semibold, fontSize: 20, lineHeight: 28, letterSpacing: -0.2 },
+  body: { fontFamily: Fonts.regular, fontSize: 16, lineHeight: 24 },
+  bodyStrong: { fontFamily: Fonts.semibold, fontSize: 16, lineHeight: 24 },
+  small: { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 20 },
+  caption: { fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18 },
+  hero: { borderRadius: Radius.lg, padding: Spacing.xl, gap: Spacing.md },
+  heroIcon: { width: 52, height: 52, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  screen: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl, alignItems: 'center' },
+  column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.lg },
   footer: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, borderTopWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
-  card: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.lg, gap: Spacing.sm },
-  navCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  section: { gap: Spacing.sm, marginTop: Spacing.sm },
+  card: { borderWidth: 1, borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.sm },
+  navCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg + 2 },
+  section: { gap: Spacing.md, marginTop: Spacing.md },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.md },
-  button: { minHeight: 50, borderRadius: Radius.md, borderWidth: 1.5, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.md },
+  button: { minHeight: 52, borderRadius: Radius.md, borderWidth: 1.5, paddingHorizontal: Spacing.xl, alignItems: 'center', justifyContent: 'center' },
+  ghost: { minHeight: 44 },
+  buttonText: { fontFamily: Fonts.semibold, fontSize: 16, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: { minHeight: 48, borderRadius: Radius.pill, borderWidth: 1.5, paddingHorizontal: Spacing.lg, justifyContent: 'center' },
-  chipText: { fontSize: 15, fontWeight: '600' },
-  badge: { alignSelf: 'flex-start', maxWidth: '100%', borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
-  badgeText: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
+  chip: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs + 2, borderRadius: Radius.pill, borderWidth: 1.5, paddingHorizontal: Spacing.lg },
+  chipText: { fontSize: 15 },
+  badge: { alignSelf: 'flex-start', maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
+  badgeText: { fontFamily: Fonts.semibold, fontSize: 13, lineHeight: 18, flexShrink: 1 },
 });

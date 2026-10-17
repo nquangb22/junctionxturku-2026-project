@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/figtree": "^0.4.1",
     "@expo/ui": "~57.0.25",
+    "@expo/vector-icons": "^15.0.2",
     "@firstcar/core": "*",
     "expo": "~57.0.0",
     "expo-clipboard": "~57.0.2",

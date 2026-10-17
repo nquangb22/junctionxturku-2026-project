@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
 import { lookupRegistry } from '@/adapters';
-import { Radius, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { IconLine } from '@/ui/icon';
 import { Button, Card, NavCard, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
 
@@ -62,7 +63,7 @@ export default function Registry() {
         autoCorrect={false}
         maxLength={12}
         accessibilityLabel={t('registry.plate')}
-        style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+        style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
       />
       <Button label={t('registry.check')} onPress={check} loading={busy} disabled={!plate.trim()} />
       {error ? (
@@ -106,7 +107,7 @@ export default function Registry() {
             <Card tone={reg.ownership.ownerKind === 'finance_company' || reg.ownership.holderDiffersFromOwner ? 'danger' : 'success'}>
               <Txt variant="bodyStrong">{t(`registry.owner.${reg.ownership.ownerKind}`)}</Txt>
               {reg.ownership.ownersCount !== undefined ? <Txt variant="small">{t(reg.ownership.ownersCount === 1 ? 'registry.owners.one' : 'registry.owners.other', { n: reg.ownership.ownersCount })}</Txt> : null}
-              <Txt variant="caption">🔒 {t('registry.ownerLocal')}</Txt>
+              <IconLine icon="lock" variant="caption">{t('registry.ownerLocal')}</IconLine>
             </Card>
           ) : null}
         </Section>
@@ -116,5 +117,5 @@ export default function Registry() {
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 52, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 20, fontWeight: '700', letterSpacing: 2 },
+  input: { minHeight: 52, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontFamily: Fonts.bold, fontSize: 20, letterSpacing: 2 },
 });

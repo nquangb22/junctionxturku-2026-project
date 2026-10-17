@@ -154,7 +154,7 @@ export default function Inspection() {
         </Txt>
         {driveLocked ? (
           <>
-            <Badge tone="success" label={`✓ ${t('insp.done')}`} />
+            <Badge tone="success" icon="check" label={t('insp.done')} />
             <Button kind="ghost" label={t('insp.editAnswers')} onPress={() => setEditingDrive(true)} />
           </>
         ) : (
@@ -185,7 +185,7 @@ export default function Inspection() {
         </Card>
         <View style={{ gap: Spacing.sm }}>
           <DemoBadge t={t} />
-          {c.inspectionBooking ? <Badge tone="info" icon="📅" label={t('insp.booked', { date: dateLabel(c.inspectionBooking.date), partner: c.inspectionBooking.partner })} /> : null}
+          {c.inspectionBooking ? <Badge tone="info" icon="calendar" label={t('insp.booked', { date: dateLabel(c.inspectionBooking.date), partner: c.inspectionBooking.partner })} /> : null}
           {booking ? (
             <Card>
               <Choice label={t('insp.bookPartner')} value={booking.partner} onChange={(partner) => setBooking((b) => ({ ...b, partner }))} options={PARTNERS.map((x) => ({ value: x, label: x }))} />

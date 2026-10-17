@@ -3,13 +3,14 @@ import { Redirect, Stack, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { describeValue } from '@/ui/case-helpers';
+import { IconLine } from '@/ui/icon';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { QuoteHighlight, QuoteTranslation, StatusPill } from '@/ui/status';
 
@@ -90,15 +91,15 @@ export default function ClaimsReview() {
       </View>
       {c.listing.sellerType === 'private' ? (
         <Card tone="info">
-          <Txt variant="bodyStrong">ℹ️ {t('seller.privateTitle')}</Txt>
+          <IconLine icon="info" variant="bodyStrong">{t('seller.privateTitle')}</IconLine>
           <Txt variant="small">{t('seller.privateBody')}</Txt>
         </Card>
       ) : null}
       {c.listing.injectionSuspected ? (
         <Card tone="danger">
-          <Txt variant="bodyStrong" color={p.danger}>
-            ⚠️ {t('claims.injection')}
-          </Txt>
+          <IconLine icon="warning" variant="bodyStrong" color={p.danger}>
+            {t('claims.injection')}
+          </IconLine>
         </Card>
       ) : null}
 
@@ -155,7 +156,7 @@ export default function ClaimsReview() {
                   placeholderTextColor={p.textSecondary}
                   accessibilityLabel={t('claims.otherTitle')}
                   maxLength={60}
-                  style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+                  style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
                 />
               ) : null}
               {/* autoFocus scrolls the field into view above the footer (keyboard insets on native, the browser on web). */}
@@ -168,7 +169,7 @@ export default function ClaimsReview() {
                 placeholderTextColor={p.textSecondary}
                 accessibilityLabel={t('claims.addNote')}
                 maxLength={280}
-                style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+                style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
               />
               <Button kind="secondary" label={t('claims.addButton')} onPress={add} disabled={!canAdd} />
             </>
@@ -254,7 +255,7 @@ function ClaimRow({
               placeholder={t('claims.editValue')}
               placeholderTextColor={p.textSecondary}
               keyboardType={claim.value.kind === 'text' ? 'default' : 'number-pad'}
-              style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+              style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
             />
           ) : null}
           <TextInput
@@ -264,7 +265,7 @@ function ClaimRow({
             placeholder={t('claims.editQuote')}
             placeholderTextColor={p.textSecondary}
             maxLength={280}
-            style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+            style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
           />
           <View style={styles.actions}>
             <Button kind="secondary" label={t('claims.save')} onPress={save} disabled={!valid} />
@@ -292,5 +293,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   claim: { flex: 1, minHeight: 48, justifyContent: 'center' },
-  input: { minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
+  input: { fontFamily: Fonts.regular, minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
 });

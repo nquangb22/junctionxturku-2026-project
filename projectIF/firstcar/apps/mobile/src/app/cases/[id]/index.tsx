@@ -64,7 +64,7 @@ export default function CaseOverview() {
     insure: c.status === 'bought' || c.status === 'insuring' || c.status === 'registered',
   };
   const stepStatus = (k: StepKey) =>
-    done[k] ? '✓' : !enabled[k] ? `— · 🔒 ${t(lockReason[k])}` : started[k] ? t('case.inProgress') : '—';
+    done[k] ? '✓' : !enabled[k] ? `— · ${t(lockReason[k])}` : started[k] ? t('case.inProgress') : '—';
   const done: Record<StepKey, boolean> = {
     claims: confirmed,
     registry: !!c.registry,
@@ -109,14 +109,14 @@ export default function CaseOverview() {
           {t('case.itemsExplain', { claims: c.items.filter((i) => i.origin.kind !== 'mandatory').length, checks: c.items.filter((i) => i.origin.kind === 'mandatory').length })}
         </Txt>
       ) : null}
-      {c.listing.injectionSuspected ? <Badge tone="danger" icon="⚠️" label={t('ledger.redFlag')} /> : null}
+      {c.listing.injectionSuspected ? <Badge tone="danger" icon="warning" label={t('ledger.redFlag')} /> : null}
 
       <Section title={t('case.steps')}>
         {STEPS.map((s, i) => (
           <NavCard
             key={s.key}
             title={`${i + 1}. ${t(s.label)}`}
-            subtitle={[stepStatus(s.key), s.key === 'inspection' && c.inspectionBooking ? `📅 ${c.inspectionBooking.date.slice(0, 10)}` : undefined].filter(Boolean).join(' · ')}
+            subtitle={[stepStatus(s.key), s.key === 'inspection' && c.inspectionBooking ? c.inspectionBooking.date.slice(0, 10) : undefined].filter(Boolean).join(' · ')}
             tone={done[s.key] ? 'success' : undefined}
             onPress={() => {
               if (enabled[s.key]) router.push({ pathname: s.pathname, params: { id: c.id } });
