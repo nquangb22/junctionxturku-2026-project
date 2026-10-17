@@ -1,8 +1,8 @@
 /**
- * Real photos from Wikimedia Commons (no AI images), bundled at 1000 px: front, rear and interior per demo model, plus
- * a Lapland road for Home. The licences need the authors named; Settings → Photo credits lists them all.
+ * Real photos from Wikimedia Commons (no AI images), bundled at 900–1000 px: front, rear and interior per demo model,
+ * one photo per claim topic (timing belt, rust, winter tyres…), and a Lapland road for Home. The licences need the authors named; Settings → Photo credits lists them all.
  */
-import { DEMO_ADS, type CarSpec } from '@firstcar/core';
+import { DEMO_ADS, type CarSpec, type ClaimType, type ItemOrigin, type MandatoryCheckId } from '@firstcar/core';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
@@ -11,7 +11,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
-import { EASE, PressableScale, tick } from '@/ui/motion';
+import { EASE, ENTER, PressableScale, tick } from '@/ui/motion';
 import { Txt } from '@/ui/primitives';
 
 type Model = 'golf6' | 'golf7' | 'corolla' | 'octavia' | 'passat' | 'focus';
@@ -76,6 +76,22 @@ const AUTHORS: Record<Model, Record<Angle, [author: string, license: string]>> =
   focus: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Kickaffe (Mario von Berg)', 'CC BY-SA 3.0'] },
 };
 
+const REPAIR = { source: require('@/../assets/images/photos/claim-repair.jpg'), author: 'Shixart1985', license: 'CC BY 2.0', what: 'Car repair' };
+
+/** What a claim is about. Mileage uses the ad model's own dashboard instead (see claimPhoto). */
+const TOPIC_PHOTOS: Partial<Record<ClaimType | MandatoryCheckId, { source: ImageSourcePropType; author: string; license: string; what: string }>> = {
+  service_history: { source: require('@/../assets/images/photos/claim-service.jpg'), author: 'Andrew Napier', license: 'CC BY 2.0', what: 'Oil change' },
+  timing_belt: { source: require('@/../assets/images/photos/claim-timing-belt.jpg'), author: 'Mofardo.designoli', license: 'CC BY-SA 4.0', what: 'Timing belt' },
+  clutch: { source: require('@/../assets/images/photos/claim-clutch.jpg'), author: 'dave_7', license: 'CC BY-SA 2.0', what: 'Clutch kit' },
+  recent_repair: REPAIR,
+  known_defects: REPAIR,
+  inspection_valid: { source: require('@/../assets/images/photos/claim-inspection.jpg'), author: 'PtG', license: 'CC BY-SA 4.0', what: 'A-Katsastus inspection station' },
+  no_rust: { source: require('@/../assets/images/photos/claim-rust.jpg'), author: 'Ildar Sagdejev (Specious)', license: 'CC BY-SA 4.0', what: 'Rust on a wheel arch' },
+  no_accidents: { source: require('@/../assets/images/photos/claim-accident.jpg'), author: 'Matti Blume', license: 'CC BY-SA 3.0', what: 'Crash damage' },
+  tyres_included: { source: require('@/../assets/images/photos/claim-tyres.jpg'), author: 'Ilya Plekhanov', license: 'CC BY-SA 3.0', what: 'Studded winter tyre' },
+  keys_count: { source: require('@/../assets/images/photos/claim-keys.jpg'), author: 'Adder3824', license: 'CC BY-SA 4.0', what: 'Car key' },
+};
+
 const HERO_PHOTO: ImageSourcePropType = require('@/../assets/images/photos/hero-lapland.jpg');
 const ANGLES: Angle[] = ['front', 'rear', 'interior'];
 
@@ -84,7 +100,8 @@ export function photoCredits(t: Translate): Credit[] {
   const cars = (Object.keys(MODEL_NAME) as Model[]).flatMap((m) =>
     ANGLES.map((a) => ({ what: `${MODEL_NAME[m]}, ${t(`photo.${a}`)}`, author: AUTHORS[m][a][0], license: AUTHORS[m][a][1] })),
   );
-  return [{ what: t('photo.heroName'), author: 'Ximonic (Simo Räsänen)', license: 'CC BY-SA 4.0' }, ...cars];
+  const topics = [...new Set(Object.values(TOPIC_PHOTOS))].map((x) => ({ what: x!.what, author: x!.author, license: x!.license }));
+  return [{ what: t('photo.heroName'), author: 'Ximonic (Simo Räsänen)', license: 'CC BY-SA 4.0' }, ...cars, ...topics];
 }
 
 function modelOf(car: CarLike): Model | undefined {
@@ -103,6 +120,32 @@ function modelOf(car: CarLike): Model | undefined {
 export function carFront(car: CarLike): ImageSourcePropType | undefined {
   const m = modelOf(car);
   return m ? SOURCES[m].front : undefined;
+}
+
+/** The photo for a claim or check: its topic, or for mileage the dashboard of the ad's model. */
+export function claimPhoto(key: ClaimType | MandatoryCheckId, car: CarLike): ImageSourcePropType | undefined {
+  if (key === 'odometer') {
+    const m = modelOf(car);
+    return m ? SOURCES[m].interior : undefined;
+  }
+  return TOPIC_PHOTOS[key]?.source;
+}
+
+export function itemPhoto(origin: ItemOrigin, car: CarLike): ImageSourcePropType | undefined {
+  if (origin.kind === 'claim') return claimPhoto(origin.claimType, car);
+  if (origin.kind === 'mandatory') return claimPhoto(origin.checkId, car);
+  return undefined;
+}
+
+/** A wide photo for one claim, fading in, tagged as an example: a rusty arch here is not the seller's car. */
+export function ClaimPhoto({ source, t, aspectRatio = 16 / 9 }: { source: ImageSourcePropType; t: Translate; aspectRatio?: number }) {
+  const p = usePalette();
+  return (
+    <Animated.View entering={ENTER}>
+      <Image source={source} style={[styles.claimImage, { aspectRatio, backgroundColor: p.surfaceAlt }]} contentFit="cover" transition={150} accessible={false} />
+      <ExampleTag t={t} />
+    </Animated.View>
+  );
 }
 
 /** The photos show the model, not the seller's car: a small tag on the photo says so. */
@@ -164,10 +207,10 @@ export function HeroPhoto({ t }: { t: Translate }) {
   return <Image source={HERO_PHOTO} style={[styles.hero, { backgroundColor: p.surfaceAlt }]} contentFit="cover" accessibilityLabel={t('photo.heroAlt')} accessible />;
 }
 
-/** Small rounded thumbnail for list rows. */
-export function PhotoThumb({ source }: { source: ImageSourcePropType }) {
+/** Small rounded thumbnail for list rows; `small` is a square for rows that also carry badges. */
+export function PhotoThumb({ source, small }: { source: ImageSourcePropType; small?: boolean }) {
   const p = usePalette();
-  return <Image source={source} style={[styles.thumb, { backgroundColor: p.surfaceAlt }]} contentFit="cover" accessible={false} />;
+  return <Image source={source} style={[small ? styles.thumbSmall : styles.thumb, { backgroundColor: p.surfaceAlt }]} contentFit="cover" accessible={false} />;
 }
 
 /** One photo card per demo ad. `row` scrolls sideways (Home); `grid` wraps two per row (new case). */
@@ -221,6 +264,8 @@ const styles = StyleSheet.create({
   dot: { height: 7, borderRadius: 4 },
   hero: { width: '100%', aspectRatio: 3 / 2, borderRadius: Radius.lg },
   thumb: { width: 72, height: 54, borderRadius: Radius.md },
+  thumbSmall: { width: 48, height: 48, borderRadius: Radius.md },
+  claimImage: { width: '100%', borderRadius: Radius.lg },
   row: { gap: Spacing.md, paddingRight: Spacing.lg },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   card: { borderWidth: 1.5, borderRadius: Radius.lg, overflow: 'hidden' },
