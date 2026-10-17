@@ -10,6 +10,7 @@ import { makeT } from '@/i18n';
 import { useReminderSync } from '@/reminders/use-reminder-sync';
 import { SessionProvider, useSession } from '@/state/session';
 import { StoreProvider, useStoreState } from '@/state/store';
+import { BackButton, ROOT_ROUTES } from '@/ui/back-button';
 import { Button, Txt } from '@/ui/primitives';
 
 SplashScreen.preventAutoHideAsync();
@@ -54,12 +55,15 @@ function AppStack() {
   return (
     <View style={styles.fill}>
       <Stack
-        screenOptions={{
+        screenOptions={({ route }) => ({
           headerStyle: { backgroundColor: p.surface },
           headerTintColor: p.text,
           headerTitleStyle: { fontWeight: '700' },
           contentStyle: { backgroundColor: p.background },
-        }}
+          // Our own button, so it survives a reload or deep link (empty history); Home never has one.
+          headerBackVisible: false,
+          headerLeft: ROOT_ROUTES.has(route.name) ? () => null : () => <BackButton routeName={route.name} params={route.params as Record<string, string> | undefined} />,
+        })}
       />
       <SaveErrorBanner />
     </View>

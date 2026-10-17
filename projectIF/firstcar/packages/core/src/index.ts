@@ -6,6 +6,7 @@ export * from './extract-rules';
 export * from './pipeline';
 export * from './content';
 export * from './ledger';
+export * from './mileage';
 export * from './generators';
 export * from './case';
 export * from './budget';

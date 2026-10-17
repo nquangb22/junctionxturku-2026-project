@@ -8,7 +8,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
-import { notify } from '@/ui/dialog';
+import { confirmAction, notify } from '@/ui/dialog';
 import { Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
 
@@ -47,12 +47,26 @@ export default function Inspection() {
 
   const saveInspection = () => report(caseEvent(c.id, { type: 'inspection_result', outcomes: insp }));
 
+  const atContract = c.status === 'contract_prep' || c.status === 'ready_to_buy';
+  const needsInspection = plan.prePurchase.recommended && !c.inspectionDone && !c.inspectionSkipped;
+  // Why "next" is disabled, shown right above it: the footer button is never an enabled-looking no-op.
+  const blocked = atContract ? undefined : !c.testDriveDone ? t('insp.needDrive') : needsInspection ? t('insp.needInspection') : undefined;
+
+  const skipInspection = () =>
+    confirmAction({
+      title: t('insp.skip'),
+      message: t('insp.skipConfirm'),
+      confirmLabel: t('insp.skip'),
+      cancelLabel: t('common.cancel'),
+      onConfirm: () => report(caseEvent(c.id, { type: 'inspection_skipped' })),
+    });
+
   const toContract = () => {
     if (c.status === 'checking') {
       const startErr = caseEvent(c.id, { type: 'start_inspection' });
       if (startErr) return report(startErr);
     }
-    const err = c.status === 'contract_prep' || c.status === 'ready_to_buy' ? undefined : caseEvent(c.id, { type: 'start_contract' });
+    const err = atContract ? undefined : caseEvent(c.id, { type: 'start_contract' });
     if (err) {
       setError(err === 'test_drive_missing' ? t('insp.needDrive') : err === 'inspection_missing' ? t('insp.needInspection') : t('common.error', { error: err }));
       return;
@@ -61,7 +75,14 @@ export default function Inspection() {
   };
 
   return (
-    <Screen footer={<Button label={t('insp.next')} onPress={toContract} />}>
+    <Screen
+      footer={
+        <View style={{ gap: Spacing.sm }}>
+          {blocked ? <Txt variant="small">{blocked}</Txt> : null}
+          <Button label={t('common.next', { step: t('case.step.contract') })} disabled={!!blocked} onPress={toContract} />
+          {needsInspection && c.testDriveDone && !atContract ? <Button kind="ghost" label={t('insp.skip')} onPress={skipInspection} /> : null}
+        </View>
+      }>
       <Stack.Screen options={{ title: t('insp.title') }} />
       {error ? (
         <Txt color={p.danger} accessibilityLiveRegion="polite">

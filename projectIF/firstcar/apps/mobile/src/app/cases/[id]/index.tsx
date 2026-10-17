@@ -7,7 +7,7 @@ import type { MessageKey } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { caseCounts, caseTitle } from '@/ui/case-helpers';
-import { confirmAction } from '@/ui/dialog';
+import { confirmAction, notify } from '@/ui/dialog';
 import { Badge, Button, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 
 type StepKey = 'claims' | 'registry' | 'ledger' | 'inspection' | 'contract' | 'decide' | 'insure';
@@ -43,6 +43,16 @@ export default function CaseOverview() {
     decide: CONTRACT_OR_LATER.has(c.status),
     insure: AFTER_PURCHASE.has(c.status),
   };
+  // Shown under a locked step and on tap, so a locked row is never a silent no-op.
+  const lockReason: Record<StepKey, MessageKey> = {
+    claims: 'case.locked.claims',
+    registry: 'case.locked.claims',
+    ledger: 'case.locked.claims',
+    inspection: 'case.locked.registry',
+    contract: 'case.locked.inspection',
+    decide: 'case.locked.inspection',
+    insure: 'case.locked.insure',
+  };
   const done: Record<StepKey, boolean> = {
     claims: confirmed,
     registry: !!c.registry,
@@ -66,6 +76,15 @@ export default function CaseOverview() {
       },
     });
 
+  const confirmWalkAway = () =>
+    confirmAction({
+      title: t('case.walkAway'),
+      message: t('case.walkAwayConfirm'),
+      confirmLabel: t('case.walkAway'),
+      cancelLabel: t('common.cancel'),
+      onConfirm: () => caseEvent(c.id, { type: 'walk_away' }),
+    });
+
   return (
     <Screen>
       <Stack.Screen options={{ title: caseTitle(c) }} />
@@ -80,10 +99,11 @@ export default function CaseOverview() {
           <NavCard
             key={s.key}
             title={`${i + 1}. ${t(s.label)}`}
-            subtitle={done[s.key] ? '✓' : enabled[s.key] ? undefined : '—'}
+            subtitle={done[s.key] ? '✓' : enabled[s.key] ? undefined : `🔒 ${t(lockReason[s.key])}`}
             tone={done[s.key] ? 'success' : undefined}
             onPress={() => {
               if (enabled[s.key]) router.push({ pathname: s.pathname, params: { id: c.id } });
+              else notify(`${i + 1}. ${t(s.label)}`, t(lockReason[s.key]));
             }}
           />
         ))}
@@ -92,7 +112,7 @@ export default function CaseOverview() {
       {c.status === 'walked_away' ? (
         <Button kind="secondary" label={t('case.reopen')} onPress={() => caseEvent(c.id, { type: 'reopen' })} />
       ) : !AFTER_PURCHASE.has(c.status) ? (
-        <Button kind="secondary" label={t('case.walkAway')} onPress={() => caseEvent(c.id, { type: 'walk_away' })} />
+        <Button kind="secondary" label={t('case.walkAway')} onPress={confirmWalkAway} />
       ) : null}
       <Button kind="ghost" label={t('case.delete')} onPress={confirmDelete} />
       <Txt variant="caption">{c.listing.capturedAt.slice(0, 10)} · v{c.version}</Txt>

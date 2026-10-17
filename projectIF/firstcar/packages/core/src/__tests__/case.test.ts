@@ -4,7 +4,7 @@ import { applyEvent, createCase, evaluateGate, type CaseEvent, type Ctx } from '
 import { DEMO_ADS, MOCK_REGISTRY } from '../fixtures';
 import { beltDueCost, contractText, inspectionPlan, openQuestions, questionFor } from '../generators';
 import { itemTitle, renderFinding } from '../ledger';
-import { eur } from '../money';
+import { eur, formatKm } from '../money';
 import { analyseAd } from '../pipeline';
 import { remindersFor } from '../reminders';
 import type { PurchaseCase, RegistryCheck } from '../types';
@@ -46,7 +46,7 @@ describe('Golf odometer cascade (demo killer moment)', () => {
     const odo = claimItem(checked, 'odometer');
     expect(odo.status).toBe('not_verified');
     const finding = odo.findings.find((f) => f.code === 'odometer_rollback')!;
-    expect(renderFinding(finding, 'en')).toBe('The ad says 180 000 km. At its inspection on 03/2026 the odometer read 212 400 km.');
+    expect(renderFinding(finding, 'en')).toContain(`the odometer read ${formatKm(212_400)}: ${formatKm(32_400)} more than the ad (+18 %).`);
   });
 
   it('cascades: the belt becomes due and the budget gets the belt job', () => {
@@ -70,10 +70,12 @@ describe('Golf odometer cascade (demo killer moment)', () => {
     expect(openQuestions(checked, 'en').length).toBeGreaterThan(3);
   });
 
-  it('adds a seller assurance clause for the unverified odometer', () => {
-    const clause = checked.clauses.find((cl) => cl.id === `assurance:${claimItem(checked, 'odometer').id}`);
+  it('records the contradicted odometer as disputed, not as a seller assurance', () => {
+    const id = claimItem(checked, 'odometer').id;
+    expect(checked.clauses.find((cl) => cl.id === `assurance:${id}`)).toBeUndefined();
+    const clause = checked.clauses.find((cl) => cl.id === `dispute:${id}`);
     expect(clause?.included).toBe(true);
-    expect(clause?.text).toContain('Ajettu 180 000 km');
+    expect(clause?.text).toContain(formatKm(180_000));
   });
 
   it('recommends a pre-purchase inspection with reasons', () => {

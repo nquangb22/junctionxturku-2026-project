@@ -146,7 +146,8 @@ export function makeEvidence(
   };
 }
 
-const monthYear = (iso: string) => {
+/** "2026-03-12" → "03/2026". */
+export const monthYear = (iso: string) => {
   const [y, m] = iso.split('-');
   return m ? `${m}/${y}` : (y ?? iso);
 };
@@ -178,7 +179,14 @@ export function registryEvidence(c: PurchaseCase, reg: RegistryCheck, now: Date)
         case 'odometer': {
           const regKm = reg.inspection?.odometerKmAtLast;
           if (regKm === undefined || claim.value.kind !== 'km') break;
-          const params = { adKm: formatKm(claim.value.km), regKm: formatKm(regKm), date: monthYear(reg.inspection?.lastDate ?? '') };
+          const diff = regKm - claim.value.km;
+          const params = {
+            adKm: formatKm(claim.value.km),
+            regKm: formatKm(regKm),
+            date: monthYear(reg.inspection?.lastDate ?? ''),
+            diffKm: formatKm(diff),
+            pct: String(Math.round((diff / claim.value.km) * 100)),
+          };
           if (claim.value.km < regKm) {
             add(item.id, 'contradicts', [{ kind: 'contradiction', code: 'odometer_rollback', params }], [{ claimType: 'odometer', value: { kind: 'km', km: regKm } }]);
           } else {

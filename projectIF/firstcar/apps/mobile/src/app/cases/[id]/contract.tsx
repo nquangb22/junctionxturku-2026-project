@@ -8,7 +8,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { notify } from '@/ui/dialog';
-import { Badge, Button, Screen, Txt } from '@/ui/primitives';
+import { Badge, Button, Card, Screen, Txt } from '@/ui/primitives';
 
 const EDITABLE_STATUSES = new Set(['checking', 'inspecting', 'contract_prep', 'ready_to_buy']);
 
@@ -32,6 +32,11 @@ export default function Contract() {
     <Screen footer={<Button label={t('contract.next')} onPress={() => router.push({ pathname: '/cases/[id]/decide', params: { id: c.id } })} />}>
       <Stack.Screen options={{ title: t('contract.title') }} />
       <Txt variant="h2">{t('contract.body')}</Txt>
+      {c.clauses.some((cl) => cl.kind === 'disputed_claim') ? (
+        <Card tone="danger">
+          <Txt variant="bodyStrong">⚠️ {t('contract.disputedWarning')}</Txt>
+        </Card>
+      ) : null}
       {c.clauses.map((cl) => (
         <Pressable
           key={cl.id}
@@ -39,12 +44,13 @@ export default function Contract() {
           onPress={() => caseEvent(c.id, { type: 'clause_toggled', clauseId: cl.id })}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: cl.included, disabled: !editable }}
-          style={[styles.clause, { borderColor: cl.kind === 'seller_assurance' ? p.warning : p.border, backgroundColor: cl.included ? p.surface : p.surfaceAlt }]}>
+          style={[styles.clause, { borderColor: cl.kind === 'disputed_claim' ? p.danger : cl.kind === 'seller_assurance' ? p.warning : p.border, backgroundColor: cl.included ? p.surface : p.surfaceAlt }]}>
           <View style={styles.head}>
             <Txt variant="h2" importantForAccessibility="no">
               {cl.included ? '☑' : '☐'}
             </Txt>
             {cl.kind === 'seller_assurance' ? <Badge tone="warning" label={t('contract.assurance')} /> : null}
+            {cl.kind === 'disputed_claim' ? <Badge tone="danger" label={t('contract.disputed')} /> : null}
           </View>
           <Txt style={{ opacity: cl.included ? 1 : 0.5 }}>{cl.text}</Txt>
         </Pressable>
