@@ -1,10 +1,10 @@
 import { Stack, router } from 'expo-router';
-import { Platform, Share, View } from 'react-native';
+import { Platform, Share } from 'react-native';
 
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { confirmAction, notify } from '@/ui/dialog';
-import { PhotoCredit, PHOTOS } from '@/ui/photos';
+import { photoCredits } from '@/ui/photos';
 import { Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Settings() {
@@ -76,11 +76,10 @@ export default function Settings() {
       <Section title={t('settings.credits')}>
         <Txt variant="caption">{t('settings.creditsHint')}</Txt>
         <Card>
-          {Object.values(PHOTOS).map((ph) => (
-            <View key={ph.page} style={{ gap: 2 }}>
-              <Txt variant="small">{ph.model ?? t('photo.heroName')}</Txt>
-              <PhotoCredit photo={ph} t={t} />
-            </View>
+          {photoCredits(t).map((c) => (
+            <Txt key={c.what} variant="caption">
+              {`${c.what}: ${c.author}, ${c.license}`}
+            </Txt>
           ))}
         </Card>
       </Section>

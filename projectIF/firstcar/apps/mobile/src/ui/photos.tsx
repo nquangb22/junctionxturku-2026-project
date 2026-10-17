@@ -1,138 +1,217 @@
 /**
- * Real photos from Wikimedia Commons (no AI images), bundled at 1000 px. CC BY / CC BY-SA need the author and licence
- * shown next to the photo and a link to the original: PhotoCredit and the Settings credits list do both.
+ * Real photos from Wikimedia Commons (no AI images), bundled at 1000 px: front, rear and interior per demo model, plus
+ * a Lapland road for Home. The licences need the authors named; Settings → Photo credits lists them all.
  */
-import type { CarSpec } from '@firstcar/core';
+import { DEMO_ADS, type CarSpec } from '@firstcar/core';
 import { Image } from 'expo-image';
-import { openBrowserAsync } from 'expo-web-browser';
-import { Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
 import { Txt } from '@/ui/primitives';
 
-export type PhotoKey = 'hero' | 'golf6' | 'golf7' | 'corolla' | 'octavia' | 'passat' | 'focus';
+type Model = 'golf6' | 'golf7' | 'corolla' | 'octavia' | 'passat' | 'focus';
+type Angle = 'front' | 'rear' | 'interior';
+type CarLike = Partial<Pick<CarSpec, 'make' | 'model' | 'modelYear'>>;
 
-export interface Photo {
-  source: ImageSourcePropType;
-  /** Model name shown in "Example photo of a …"; the hero has none. */
-  model?: string;
+export interface Credit {
+  what: string;
   author: string;
   license: string;
-  page: string;
 }
 
-export const PHOTOS: Record<PhotoKey, Photo> = {
-  hero: {
-    source: require('@/../assets/images/photos/hero-lapland.jpg'),
-    author: 'Ximonic (Simo Räsänen)',
-    license: 'CC BY-SA 4.0',
-    page: 'https://commons.wikimedia.org/wiki/File:Cars_parked_on_the_sides_of_road_during_high_autumn_season,_Muonio,_Lapland,_Finland,_2021_September.jpg',
-  },
+const MODEL_NAME: Record<Model, string> = {
+  golf6: 'Volkswagen Golf VI',
+  golf7: 'Volkswagen Golf VII',
+  corolla: 'Toyota Corolla',
+  octavia: 'Škoda Octavia Combi',
+  passat: 'Volkswagen Passat',
+  focus: 'Ford Focus',
+};
+
+// Metro needs literal require paths, so every file is listed.
+const SOURCES: Record<Model, Record<Angle, ImageSourcePropType>> = {
   golf6: {
-    source: require('@/../assets/images/photos/golf-6.jpg'),
-    model: 'Volkswagen Golf VI',
-    author: 'Thomas doerfer',
-    license: 'CC BY 3.0',
-    page: 'https://commons.wikimedia.org/wiki/File:VW_Golf_VI_1.6_Comfortline_Deep_Black.JPG',
+    front: require('@/../assets/images/photos/golf6-front.jpg'),
+    rear: require('@/../assets/images/photos/golf6-rear.jpg'),
+    interior: require('@/../assets/images/photos/golf6-interior.jpg'),
   },
   golf7: {
-    source: require('@/../assets/images/photos/golf-7.jpg'),
-    model: 'Volkswagen Golf VII',
-    author: 'Vauxford',
-    license: 'CC BY-SA 4.0',
-    page: 'https://commons.wikimedia.org/wiki/File:2013_Volkswagen_Golf_SE_BlueMotion_Technology_1.4_Front.jpg',
+    front: require('@/../assets/images/photos/golf7-front.jpg'),
+    rear: require('@/../assets/images/photos/golf7-rear.jpg'),
+    interior: require('@/../assets/images/photos/golf7-interior.jpg'),
   },
   corolla: {
-    source: require('@/../assets/images/photos/corolla.jpg'),
-    model: 'Toyota Corolla',
-    author: 'KGC626',
-    license: 'CC BY-SA 4.0',
-    page: 'https://commons.wikimedia.org/wiki/File:2018_Toyota_Corolla_1.6_Valvematic_Multidrive_S_Luna.jpg',
+    front: require('@/../assets/images/photos/corolla-front.jpg'),
+    rear: require('@/../assets/images/photos/corolla-rear.jpg'),
+    interior: require('@/../assets/images/photos/corolla-interior.jpg'),
   },
   octavia: {
-    source: require('@/../assets/images/photos/octavia.jpg'),
-    model: 'Škoda Octavia Combi',
-    author: 'Vauxford',
-    license: 'CC BY-SA 4.0',
-    page: 'https://commons.wikimedia.org/wiki/File:2016_Skoda_Octavia_SE_L_TSi_Estate_1.4_Front.jpg',
+    front: require('@/../assets/images/photos/octavia-front.jpg'),
+    rear: require('@/../assets/images/photos/octavia-rear.jpg'),
+    interior: require('@/../assets/images/photos/octavia-interior.jpg'),
   },
   passat: {
-    source: require('@/../assets/images/photos/passat.jpg'),
-    model: 'Volkswagen Passat',
-    author: 'Vauxford',
-    license: 'CC BY-SA 4.0',
-    page: 'https://commons.wikimedia.org/wiki/File:2017_Volkswagen_Passat_GT_TDi_2.0_Front.jpg',
+    front: require('@/../assets/images/photos/passat-front.jpg'),
+    rear: require('@/../assets/images/photos/passat-rear.jpg'),
+    interior: require('@/../assets/images/photos/passat-interior.jpg'),
   },
   focus: {
-    source: require('@/../assets/images/photos/focus.jpg'),
-    model: 'Ford Focus',
-    author: 'Vauxford',
-    license: 'CC BY-SA 4.0',
-    page: 'https://commons.wikimedia.org/wiki/File:2015_Ford_Focus_Titanium_1.0_Front.jpg',
+    front: require('@/../assets/images/photos/focus-front.jpg'),
+    rear: require('@/../assets/images/photos/focus-rear.jpg'),
+    interior: require('@/../assets/images/photos/focus-interior.jpg'),
   },
 };
 
-/** An example photo of the same model (and Golf generation) as the ad, or undefined when we have none. */
-export function carPhoto(car: Partial<Pick<CarSpec, 'make' | 'model' | 'modelYear'>>): Photo | undefined {
+const AUTHORS: Record<Model, Record<Angle, [author: string, license: string]>> = {
+  golf6: { front: ['Thomas doerfer', 'CC BY 3.0'], rear: ['Thomas doerfer', 'CC BY 3.0'], interior: ['TTTNIS', 'Public domain'] },
+  golf7: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Antoineets', 'CC BY-SA 4.0'] },
+  corolla: { front: ['KGC626', 'CC BY-SA 4.0'], rear: ['Alex Neman', 'CC BY-SA 4.0'], interior: ['TTTNIS', 'CC0'] },
+  octavia: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Kickaffe (Mario von Berg)', 'CC BY-SA 3.0'] },
+  passat: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Acgskup', 'CC BY 4.0'] },
+  focus: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Kickaffe (Mario von Berg)', 'CC BY-SA 3.0'] },
+};
+
+const HERO_PHOTO: ImageSourcePropType = require('@/../assets/images/photos/hero-lapland.jpg');
+const ANGLES: Angle[] = ['front', 'rear', 'interior'];
+
+/** Every photo with its author and licence, for Settings → Photo credits. */
+export function photoCredits(t: Translate): Credit[] {
+  const cars = (Object.keys(MODEL_NAME) as Model[]).flatMap((m) =>
+    ANGLES.map((a) => ({ what: `${MODEL_NAME[m]}, ${t(`photo.${a}`)}`, author: AUTHORS[m][a][0], license: AUTHORS[m][a][1] })),
+  );
+  return [{ what: t('photo.heroName'), author: 'Ximonic (Simo Räsänen)', license: 'CC BY-SA 4.0' }, ...cars];
+}
+
+function modelOf(car: CarLike): Model | undefined {
   const make = car.make?.toLowerCase() ?? '';
   const model = car.model?.toLowerCase() ?? '';
   const vw = make === 'vw' || make === 'volkswagen';
-  if (vw && model.startsWith('golf')) return PHOTOS[car.modelYear !== undefined && car.modelYear <= 2012 ? 'golf6' : 'golf7'];
-  if (vw && model.startsWith('passat')) return PHOTOS.passat;
-  if (make === 'toyota' && model.startsWith('corolla')) return PHOTOS.corolla;
-  if ((make === 'skoda' || make === 'škoda') && model.startsWith('octavia')) return PHOTOS.octavia;
-  if (make === 'ford' && model.startsWith('focus')) return PHOTOS.focus;
+  if (vw && model.startsWith('golf')) return car.modelYear !== undefined && car.modelYear <= 2012 ? 'golf6' : 'golf7';
+  if (vw && model.startsWith('passat')) return 'passat';
+  if (make === 'toyota' && model.startsWith('corolla')) return 'corolla';
+  if ((make === 'skoda' || make === 'škoda') && model.startsWith('octavia')) return 'octavia';
+  if (make === 'ford' && model.startsWith('focus')) return 'focus';
   return undefined;
 }
 
-/** "Photo: author, licence": opens the original on Wikimedia Commons, as the licences ask. */
-export function PhotoCredit({ photo, t }: { photo: Photo; t: Translate }) {
+/** The front photo of the ad's model (and Golf generation), or undefined when we have none. */
+export function carFront(car: CarLike): ImageSourcePropType | undefined {
+  const m = modelOf(car);
+  return m ? SOURCES[m].front : undefined;
+}
+
+/** The photos show the model, not the seller's car: a small tag on the photo says so. */
+function ExampleTag({ t }: { t: Translate }) {
   return (
-    <Pressable accessibilityRole="link" hitSlop={6} onPress={() => void openBrowserAsync(photo.page)}>
-      <Txt variant="caption" style={styles.link}>
-        {t('photo.credit', { author: photo.author, license: photo.license })}
+    <View style={styles.tag} pointerEvents="none">
+      <Txt variant="caption" color="#FFFFFF">
+        {t('photo.exampleTag')}
       </Txt>
-    </Pressable>
+    </View>
   );
 }
 
-/**
- * A wide photo with its credit. For a car it says plainly that this is an example of the model,
- * not the car in the ad: a buyer must never mistake it for the seller's photo.
- */
-export function PhotoCard({ photo, t, alt, aspectRatio = 16 / 9 }: { photo: Photo; t: Translate; alt?: string; aspectRatio?: number }) {
+/** Swipeable front / rear / interior photos of the ad's model, with dots underneath. */
+export function CarGallery({ car, t }: { car: CarLike; t: Translate }) {
   const p = usePalette();
-  const label = alt ?? (photo.model ? t('photo.example', { model: photo.model }) : undefined);
+  const [width, setWidth] = useState(0);
+  const [index, setIndex] = useState(0);
+  const m = modelOf(car);
+  if (!m) return null;
   return (
-    <View style={styles.wrap}>
-      <Image
-        source={photo.source}
-        style={[styles.image, { aspectRatio, backgroundColor: p.surfaceAlt }]}
-        contentFit="cover"
-        transition={150}
-        accessibilityLabel={label}
-        accessible={!!label}
-      />
-      <View style={styles.caption}>
-        {photo.model ? <Txt variant="caption">{t('photo.example', { model: photo.model })}</Txt> : null}
-        <PhotoCredit photo={photo} t={t} />
+    <View style={styles.gallery} accessible accessibilityLabel={t('photo.galleryLabel', { model: MODEL_NAME[m] })}>
+      <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(e) => width && setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
+          style={styles.galleryScroll}>
+          {ANGLES.map((a) => (
+            <Image key={a} source={SOURCES[m][a]} style={[styles.slide, { width: width || 1, backgroundColor: p.surfaceAlt }]} contentFit="cover" transition={150} />
+          ))}
+        </ScrollView>
+        <ExampleTag t={t} />
+      </View>
+      <View style={styles.dots}>
+        {ANGLES.map((a, i) => (
+          <View key={a} style={[styles.dot, { backgroundColor: i === index ? p.primary : p.borderStrong }]} />
+        ))}
       </View>
     </View>
   );
 }
 
-/** Small rounded thumbnail for list rows; the credit sits in Settings → Photo credits. */
-export function PhotoThumb({ photo }: { photo: Photo }) {
+/** Big photo at the top of Home. */
+export function HeroPhoto({ t }: { t: Translate }) {
   const p = usePalette();
-  return <Image source={photo.source} style={[styles.thumb, { backgroundColor: p.surfaceAlt }]} contentFit="cover" accessible={false} />;
+  return <Image source={HERO_PHOTO} style={[styles.hero, { backgroundColor: p.surfaceAlt }]} contentFit="cover" accessibilityLabel={t('photo.heroAlt')} accessible />;
+}
+
+/** Small rounded thumbnail for list rows. */
+export function PhotoThumb({ source }: { source: ImageSourcePropType }) {
+  const p = usePalette();
+  return <Image source={source} style={[styles.thumb, { backgroundColor: p.surfaceAlt }]} contentFit="cover" accessible={false} />;
+}
+
+/** One photo card per demo ad. `row` scrolls sideways (Home); `grid` wraps two per row (new case). */
+export function DemoAdCards({ t, selected, onPick, layout }: { t: Translate; selected?: string; onPick: (id: string) => void; layout: 'row' | 'grid' }) {
+  const p = usePalette();
+  const cards = DEMO_ADS.map((ad) => {
+    const front = carFront(ad.llm.car);
+    const on = ad.id === selected;
+    const [name, note] = ad.label.split(' (');
+    return (
+      <Pressable
+        key={ad.id}
+        accessibilityRole={layout === 'grid' ? 'radio' : 'button'}
+        accessibilityState={layout === 'grid' ? { checked: on } : undefined}
+        accessibilityLabel={ad.label}
+        onPress={() => onPick(ad.id)}
+        style={({ pressed }) => [
+          styles.card,
+          layout === 'row' ? styles.cardRow : styles.cardGrid,
+          { backgroundColor: on ? p.primarySoft : p.surface, borderColor: on ? p.primary : p.border, opacity: pressed ? 0.85 : 1 },
+        ]}>
+        {front ? <Image source={front} style={[styles.cardImage, { backgroundColor: p.surfaceAlt }]} contentFit="cover" /> : null}
+        <View style={styles.cardText}>
+          <Txt variant="bodyStrong" numberOfLines={1} color={on ? p.primary : undefined}>
+            {name}
+          </Txt>
+          {note ? (
+            <Txt variant="caption" numberOfLines={2}>
+              {note.replace(/\)$/, '')}
+            </Txt>
+          ) : null}
+        </View>
+      </Pressable>
+    );
+  });
+  if (layout === 'grid') return <View style={styles.grid}>{cards}</View>;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} accessibilityLabel={t('home.demoTitle')}>
+      {cards}
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: Spacing.xs },
-  image: { width: '100%', borderRadius: Radius.lg },
-  caption: { gap: 2 },
-  link: { textDecorationLine: 'underline' },
+  gallery: { gap: Spacing.sm },
+  galleryScroll: { borderRadius: Radius.lg },
+  slide: { aspectRatio: 16 / 10 },
+  tag: { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#24150CB3', borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.xs },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  hero: { width: '100%', aspectRatio: 3 / 2, borderRadius: Radius.lg },
   thumb: { width: 72, height: 54, borderRadius: Radius.md },
+  row: { gap: Spacing.md, paddingRight: Spacing.lg },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
+  card: { borderWidth: 1.5, borderRadius: Radius.lg, overflow: 'hidden' },
+  cardRow: { width: 200 },
+  cardGrid: { flexBasis: '45%', flexGrow: 1 },
+  cardImage: { width: '100%', aspectRatio: 16 / 10 },
+  cardText: { padding: Spacing.md, gap: 2 },
 });
