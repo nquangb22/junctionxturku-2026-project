@@ -20,7 +20,8 @@ interface Hit {
   confidence: Confidence;
 }
 
-const NUM = String.raw`\d{1,3}(?:[ .\u00A0\u202F]\d{3})+|\d+`;
+// Leading boundary: "2015 180 000 km" must not parse as 15 180 000.
+const NUM = String.raw`(?<![\d.])(?:\d{1,3}(?:[ .\u00A0\u202F]\d{3})+|\d+)`;
 const KM_UNIT = String.raw`tkm\.?|t\.km|km|mil`;
 
 const BELT_WORDS = /(jakohihna|hammashihna|kamrem|tidsreim|timing belt|cambelt)/i;
@@ -82,6 +83,7 @@ const INJECTION = [
 ];
 
 const ZERO_WIDTH_RUN = /[\u200B-\u200D\u2060\uFEFF]{2,}/;
+const ZERO_WIDTH_ANY = /[\u200B-\u200D\u2060\uFEFF\u00AD]/g;
 
 function pushHit(hits: Hit[], hit: Hit) {
   if (!hits.some((h) => h.type === hit.type && h.index === hit.index)) hits.push(hit);
@@ -174,7 +176,7 @@ function extractCar(text: string): Partial<CarSpec> {
     car.model = capitalise(mm[2] ?? '');
     car.fieldProvenance = { ...car.fieldProvenance, make: prov, model: prov };
   }
-  const year = /\b(vm\.?|vuosimalli|model year|årsmodell|year)\s*:?\s*(19[5-9]\d|20[0-3]\d)\b/i.exec(text) ?? /\b(19[89]\d|20[0-3]\d)\b/.exec(text);
+  const year = /\b(vm\.?|vuosimalli|model year|årsmodell|year)\s*:?\s*(19[5-9]\d|20[0-3]\d)\b/i.exec(text) ?? /\b(19[89]\d|20[0-3]\d)\b(?!\s*(?:€|eur\b|euroa))/i.exec(text);
   if (year) {
     car.modelYear = Number(year[2] ?? year[1]);
     car.fieldProvenance = { ...car.fieldProvenance, modelYear: prov };
@@ -199,15 +201,18 @@ function detectFuel(text: string): Fuel | undefined {
   if (/\b(tdi|diesel|dci|crdi|hdi|cdi)\b/i.test(text)) return 'diesel';
   if (/\b(plug-in|phev|lataushybridi)\b/i.test(text)) return 'phev';
   if (/\b(hybrid|hybridi)\b/i.test(text)) return 'hybrid';
-  if (/\b(sähköauto|electric|elbil|\bev\b)\b/i.test(text)) return 'ev';
   if (/\b(tsi|tfsi|bensiini|bensin|petrol|gasoline|vvt-i)\b/i.test(text)) return 'petrol';
+  // Bare "electric" also appears in "electric windows": require car/vehicle phrasing or an EV marker.
+  if (/\b(sähköauto|elbil|(?:fully |all[- ])?electric (?:car|vehicle)|ev|bev)\b/i.test(text)) return 'ev';
   return undefined;
 }
 
 const capitalise = (s: string) => (s.length <= 3 && s === s.toUpperCase() ? s : s.charAt(0).toUpperCase() + s.slice(1).toLowerCase());
 
 export function detectInjection(text: string): boolean {
-  return ZERO_WIDTH_RUN.test(text) || INJECTION.some((re) => re.test(text));
+  // A single hidden char inside a phrase must not defeat the patterns, so match on stripped text.
+  const stripped = text.replace(ZERO_WIDTH_ANY, '');
+  return ZERO_WIDTH_RUN.test(text) || INJECTION.some((re) => re.test(stripped));
 }
 
 export function detectSellerType(text: string): SellerType {

@@ -23,8 +23,10 @@ const ASSUMPTION: Provenance = { kind: 'default', isAssumption: true, sourceId: 
 export const DEFAULT_ANNUAL_KM: Record<Density, number> = { urban: 8_000, suburban: 12_000, rural: 16_000 };
 
 /** Indicative yearly premium bands (EUR) for liability + cover intent. Estimate, not a quote. */
-const INSURANCE_YEARLY: Record<AgeBand, number> = { '18-19': 1100, '20-25': 800, '26-34': 550, '35+': 450 };
-const COVER_FACTOR: Record<CoverIntent, number> = { liability_only: 1, liability_plus_partial: 1.25, liability_plus_comprehensive: 1.6 };
+export const INSURANCE_YEARLY: Record<AgeBand, number> = { '18-19': 1100, '20-25': 800, '26-34': 550, '35+': 450 };
+export const COVER_FACTOR: Record<CoverIntent, number> = { liability_only: 1, liability_plus_partial: 1.25, liability_plus_comprehensive: 1.6 };
+
+export const FIRST_TIME_DRIVER_FACTOR = 1.15;
 
 const CONSUMPTION: Record<Fuel, { per100: number; unitPrice: number }> = {
   petrol: { per100: 6.5, unitPrice: 1.85 }, // l/100 km, €/l
@@ -80,7 +82,7 @@ export function computeBudget({ profile, car, extraOneOffEur = 0, now }: BudgetI
   const prov = (field: keyof CarSpec['fieldProvenance']) => car.fieldProvenance[field] ?? ASSUMPTION;
 
   const lines: BudgetLine[] = [
-    line('insurance', (INSURANCE_YEARLY[profile.ageBand] * COVER_FACTOR[profile.coverIntent] * (profile.firstTimeDriver ? 1.15 : 1)) / 12, ASSUMPTION),
+    line('insurance', (INSURANCE_YEARLY[profile.ageBand] * COVER_FACTOR[profile.coverIntent] * (profile.firstTimeDriver ? FIRST_TIME_DRIVER_FACTOR : 1)) / 12, ASSUMPTION),
     line('energy', (km / 100) * fuel.per100 * fuel.unitPrice / 12, ASSUMPTION),
     line('vehicle_tax', vehicleTaxYearly(car) / 12, car.co2GPerKm ? prov('co2GPerKm') : ASSUMPTION),
     line('parking', PARKING_MONTHLY[profile.density], ASSUMPTION),

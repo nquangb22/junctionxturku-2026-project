@@ -1,20 +1,21 @@
-import { inspectionPlan, itemTitle } from '@firstcar/core';
-import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { inspectionPlan, itemTitle, type CaseEvent } from '@firstcar/core';
+import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
+import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { notify } from '@/ui/dialog';
 import { Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
 
 type Mark = 'ok' | 'issue';
 
 export default function Inspection() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const c = useCase(id);
+  const c = useCase(useCaseId());
   const { t, prefs } = useSession();
   const { caseEvent } = useStore();
   const p = usePalette();
@@ -28,19 +29,29 @@ export default function Inspection() {
 
   const report = (err: string | undefined) => setError(err ? t('common.error', { error: err }) : undefined);
 
+  // Applies events in order and stops at the first failure, so a later success cannot hide an earlier error.
   const finishDrive = () => {
+    const events: CaseEvent[] = [];
     const vin = drive.vin_plate;
-    if (vin) report(caseEvent(c.id, { type: 'vin_confirmed', matches: vin === 'ok' }));
+    if (vin) events.push({ type: 'vin_confirmed', matches: vin === 'ok' });
     const rustIssue = drive.rust_check === 'issue';
     const rustItems = plan.testDrive.find((x) => x.id === 'rust_check')?.linkedItemIds ?? [];
-    if (rustIssue && rustItems.length) report(caseEvent(c.id, { type: 'evidence_added', kind: 'test_drive_note', itemIds: rustItems, outcome: 'contradicts', note: 'rust seen on test drive' }));
-    report(caseEvent(c.id, { type: 'test_drive_done' }));
+    if (rustIssue && rustItems.length) events.push({ type: 'evidence_added', kind: 'test_drive_note', itemIds: rustItems, outcome: 'contradicts', note: 'rust seen on test drive' });
+    events.push({ type: 'test_drive_done' });
+    for (const event of events) {
+      const err = caseEvent(c.id, event);
+      if (err) return report(err);
+    }
+    report(undefined);
   };
 
   const saveInspection = () => report(caseEvent(c.id, { type: 'inspection_result', outcomes: insp }));
 
   const toContract = () => {
-    if (c.status === 'checking') caseEvent(c.id, { type: 'start_inspection' });
+    if (c.status === 'checking') {
+      const startErr = caseEvent(c.id, { type: 'start_inspection' });
+      if (startErr) return report(startErr);
+    }
     const err = c.status === 'contract_prep' || c.status === 'ready_to_buy' ? undefined : caseEvent(c.id, { type: 'start_contract' });
     if (err) {
       setError(err === 'test_drive_missing' ? t('insp.needDrive') : err === 'inspection_missing' ? t('insp.needInspection') : t('common.error', { error: err }));
@@ -100,7 +111,7 @@ export default function Inspection() {
         </Card>
         <View style={{ gap: Spacing.sm }}>
           <DemoBadge t={t} />
-          <Button kind="secondary" label={t('insp.partner')} onPress={() => Alert.alert(t('insp.partner'), t('insp.partnerBooked'))} />
+          <Button kind="secondary" label={t('insp.partner')} onPress={() => notify(t('insp.partner'), t('insp.partnerBooked'))} />
         </View>
 
         {inspectable.length ? (

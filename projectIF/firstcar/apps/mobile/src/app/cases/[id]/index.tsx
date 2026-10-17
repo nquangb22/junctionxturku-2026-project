@@ -1,31 +1,32 @@
-import { Redirect, Stack, router, useLocalSearchParams, type Href } from 'expo-router';
-import { Alert, View } from 'react-native';
+import { Redirect, Stack, router } from 'expo-router';
+import { View } from 'react-native';
 
+import { useCaseId } from '@/hooks/use-case-id';
 import { Spacing } from '@/constants/theme';
 import type { MessageKey } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { caseCounts, caseTitle } from '@/ui/case-helpers';
+import { confirmAction } from '@/ui/dialog';
 import { Badge, Button, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 
 type StepKey = 'claims' | 'registry' | 'ledger' | 'inspection' | 'contract' | 'decide' | 'insure';
 
-const STEPS: { key: StepKey; label: MessageKey }[] = [
-  { key: 'claims', label: 'case.step.claims' },
-  { key: 'registry', label: 'case.step.registry' },
-  { key: 'ledger', label: 'case.step.ledger' },
-  { key: 'inspection', label: 'case.step.inspection' },
-  { key: 'contract', label: 'case.step.contract' },
-  { key: 'decide', label: 'case.step.decide' },
-  { key: 'insure', label: 'case.step.insure' },
+const STEPS: { key: StepKey; label: MessageKey; pathname: `/cases/[id]/${StepKey}` }[] = [
+  { key: 'claims', label: 'case.step.claims', pathname: '/cases/[id]/claims' },
+  { key: 'registry', label: 'case.step.registry', pathname: '/cases/[id]/registry' },
+  { key: 'ledger', label: 'case.step.ledger', pathname: '/cases/[id]/ledger' },
+  { key: 'inspection', label: 'case.step.inspection', pathname: '/cases/[id]/inspection' },
+  { key: 'contract', label: 'case.step.contract', pathname: '/cases/[id]/contract' },
+  { key: 'decide', label: 'case.step.decide', pathname: '/cases/[id]/decide' },
+  { key: 'insure', label: 'case.step.insure', pathname: '/cases/[id]/insure' },
 ];
 
 const AFTER_PURCHASE = new Set(['bought', 'insuring', 'registered', 'owned', 'closed']);
 const CONTRACT_OR_LATER = new Set(['contract_prep', 'ready_to_buy', ...AFTER_PURCHASE]);
 
 export default function CaseOverview() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const c = useCase(id);
+  const c = useCase(useCaseId());
   const { t } = useSession();
   const { caseEvent, deleteCase } = useStore();
 
@@ -53,17 +54,17 @@ export default function CaseOverview() {
   };
 
   const confirmDelete = () =>
-    Alert.alert(t('case.delete'), t('case.deleteConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('case.delete'),
-        style: 'destructive',
-        onPress: () => {
-          deleteCase(c.id);
-          router.replace('/');
-        },
+    confirmAction({
+      title: t('case.delete'),
+      message: t('case.deleteConfirm'),
+      confirmLabel: t('case.delete'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+      onConfirm: () => {
+        deleteCase(c.id);
+        router.replace('/');
       },
-    ]);
+    });
 
   return (
     <Screen>
@@ -82,7 +83,7 @@ export default function CaseOverview() {
             subtitle={done[s.key] ? '✓' : enabled[s.key] ? undefined : '—'}
             tone={done[s.key] ? 'success' : undefined}
             onPress={() => {
-              if (enabled[s.key]) router.push({ pathname: `/cases/[id]/${s.key}` as const, params: { id: c.id } } as unknown as Href);
+              if (enabled[s.key]) router.push({ pathname: s.pathname, params: { id: c.id } });
             }}
           />
         ))}

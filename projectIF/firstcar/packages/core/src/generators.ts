@@ -146,7 +146,7 @@ export function generateClauses(c: PurchaseCase, locale: Locale, previous: Contr
         kind: 'seller_assurance',
         text: renderTemplate(ASSURANCE_TEXT[locale], { claim: title, quote: claim.quote }),
         sourceItemIds: [i.id],
-        included: true,
+        included: c.assuranceChoices?.[`assurance:${i.id}`] ?? true,
       };
     });
 

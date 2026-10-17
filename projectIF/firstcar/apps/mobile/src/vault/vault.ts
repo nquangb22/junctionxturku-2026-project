@@ -16,6 +16,8 @@ import { utf8Decode, utf8Encode } from './utf8';
 const KEY_NAME = 'fc.vaultKey';
 const PREFS_NAME = 'fc.prefs';
 const VAULT_FILE = 'firstcar-vault.bin';
+const BACKUP_FILE = 'firstcar-vault.bak';
+const TEMP_FILE = 'firstcar-vault.tmp';
 const WEB_DATA = 'fc.webVault';
 
 const isWeb = Platform.OS === 'web';
@@ -30,7 +32,12 @@ export interface VaultPrefs {
 
 export const DEFAULT_PREFS: VaultPrefs = { locale: 'en', biometricLock: true, skipLockInDemo: false };
 
-export type LoadResult = { status: 'empty' } | { status: 'ok'; json: string } | { status: 'key_lost' };
+export type LoadResult =
+  | { status: 'empty' }
+  | { status: 'ok'; json: string }
+  | { status: 'key_lost' } // no key in the keystore
+  | { status: 'corrupt' } // key present but no copy of the blob decrypts
+  | { status: 'error'; message: string }; // transient IO / keystore failure: retry, never wipe
 
 /* ---------- prefs (not sensitive, readable before unlock) ---------- */
 
@@ -63,29 +70,55 @@ async function createKey(): Promise<AESEncryptionKey> {
 }
 
 const vaultFile = () => new File(Paths.document, VAULT_FILE);
+const backupFile = () => new File(Paths.document, BACKUP_FILE);
+const tempFile = () => new File(Paths.document, TEMP_FILE);
 
 /* ---------- data ---------- */
 
-/** Call only after the user has unlocked. */
+/** Reads and decrypts one vault file. Undefined = not decryptable (corrupt); IO errors propagate. */
+async function readSealed(file: File, key: AESEncryptionKey): Promise<string | undefined> {
+  const raw = await file.text();
+  try {
+    return utf8Decode(await aesDecryptAsync(AESSealedData.fromCombined(raw), key));
+  } catch {
+    return undefined;
+  }
+}
+
+/** Call only after the user has unlocked. Tells a missing key, a corrupt blob and IO errors apart. */
 export async function loadVault(): Promise<LoadResult> {
   if (isWeb) {
     const raw = globalThis.localStorage?.getItem(WEB_DATA);
     return raw ? { status: 'ok', json: raw } : { status: 'empty' };
   }
-  const file = vaultFile();
-  if (!file.exists) return { status: 'empty' };
-  const key = await readKey();
-  if (!key) return { status: 'key_lost' };
   try {
-    const sealed = AESSealedData.fromCombined(await file.text());
-    const bytes = await aesDecryptAsync(sealed, key);
-    return { status: 'ok', json: utf8Decode(bytes) };
-  } catch {
-    return { status: 'key_lost' };
+    const file = vaultFile();
+    const backup = backupFile();
+    if (!file.exists && !backup.exists) return { status: 'empty' };
+    const key = await readKey();
+    if (!key) return { status: 'key_lost' };
+    const json = file.exists ? await readSealed(file, key) : undefined;
+    if (json !== undefined) return { status: 'ok', json };
+    // The main file is unreadable: fall back to the previous good copy. Nothing is overwritten here.
+    const previous = backup.exists ? await readSealed(backup, key) : undefined;
+    return previous !== undefined ? { status: 'ok', json: previous } : { status: 'corrupt' };
+  } catch (e) {
+    return { status: 'error', message: e instanceof Error ? e.message : String(e) };
   }
 }
 
-export async function saveVault(json: string): Promise<void> {
+// Saves run in order. Wiping blocks new saves and drains the queue first, so none can resurrect data.
+let saveQueue: Promise<void> = Promise.resolve();
+let wiping = false;
+
+export function saveVault(json: string): Promise<void> {
+  const run = saveQueue.then(() => (wiping ? undefined : writeVault(json)));
+  saveQueue = run.catch(() => undefined);
+  return run;
+}
+
+/** Atomic: write a temp file, keep the previous vault as .bak, then move the temp file into place. */
+async function writeVault(json: string): Promise<void> {
   if (isWeb) {
     globalThis.localStorage?.setItem(WEB_DATA, json);
     return;
@@ -93,20 +126,28 @@ export async function saveVault(json: string): Promise<void> {
   const key = (await readKey()) ?? (await createKey());
   const sealed = await aesEncryptAsync(utf8Encode(json), key);
   const combined = await sealed.combined('base64');
+  const temp = tempFile();
+  temp.create({ overwrite: true });
+  await temp.write(combined as string);
   const file = vaultFile();
-  if (!file.exists) file.create();
-  await file.write(combined as string);
+  if (file.exists) await file.copy(backupFile(), { overwrite: true });
+  await temp.move(file, { overwrite: true });
 }
 
 /** "Delete everything": data file, key and prefs. Nothing exists server-side to delete. */
 export async function wipeVault(): Promise<void> {
-  if (isWeb) {
-    globalThis.localStorage?.removeItem(WEB_DATA);
-    globalThis.localStorage?.removeItem(PREFS_NAME);
-    return;
+  wiping = true;
+  try {
+    await saveQueue;
+    if (isWeb) {
+      globalThis.localStorage?.removeItem(WEB_DATA);
+      globalThis.localStorage?.removeItem(PREFS_NAME);
+      return;
+    }
+    for (const file of [vaultFile(), backupFile(), tempFile()]) if (file.exists) file.delete();
+    await SecureStore.deleteItemAsync(KEY_NAME, secureOpts);
+    await SecureStore.deleteItemAsync(PREFS_NAME, secureOpts);
+  } finally {
+    wiping = false;
   }
-  const file = vaultFile();
-  if (file.exists) file.delete();
-  await SecureStore.deleteItemAsync(KEY_NAME, secureOpts);
-  await SecureStore.deleteItemAsync(PREFS_NAME, secureOpts);
 }

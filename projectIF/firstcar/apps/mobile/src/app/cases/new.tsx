@@ -1,4 +1,4 @@
-import { DEMO_ADS, createCase } from '@firstcar/core';
+import { DEMO_ADS, MAX_AD_CHARS, createCase } from '@firstcar/core';
 import * as Clipboard from 'expo-clipboard';
 import { randomUUID } from 'expo-crypto';
 import { Stack, router } from 'expo-router';
@@ -10,6 +10,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
+import { notify } from '@/ui/dialog';
 import { Button, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function NewCase() {
@@ -22,8 +23,12 @@ export default function NewCase() {
   const [error, setError] = useState<string | undefined>();
 
   const paste = async () => {
-    setText(await Clipboard.getStringAsync());
-    setDemoId(undefined);
+    try {
+      setText((await Clipboard.getStringAsync()).slice(0, MAX_AD_CHARS));
+      setDemoId(undefined);
+    } catch (e) {
+      notify(t('common.error', { error: e instanceof Error ? e.message : String(e) }));
+    }
   };
 
   const pickDemo = (id: string) => {
@@ -65,6 +70,7 @@ export default function NewCase() {
         placeholder={t('new.placeholder')}
         placeholderTextColor={p.textSecondary}
         multiline
+        maxLength={MAX_AD_CHARS}
         accessibilityLabel={t('new.placeholder')}
         style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
       />

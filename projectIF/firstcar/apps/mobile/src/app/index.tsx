@@ -17,6 +17,7 @@ export default function Home() {
 
   const active = data.cases.filter((c) => !OWNED.has(c.status));
   const owned = data.cases.filter((c) => OWNED.has(c.status));
+  const verdict = data.profile && data.readinessCar ? computeBudget({ profile: data.profile, car: data.readinessCar, now: new Date() }).verdict : undefined;
 
   return (
     <Screen>
@@ -28,9 +29,10 @@ export default function Home() {
 
       <NavCard
         title={t('home.readyTitle')}
-        subtitle={data.profile && data.readinessCar ? undefined : t('home.readyBody')}
-        onPress={() => router.push(data.profile && data.readinessCar ? '/ready/result' : '/ready')}
-        right={data.profile && data.readinessCar ? <ReadyBadge /> : undefined}
+        subtitle={verdict ? undefined : t('home.readyBody')}
+        accessibilityLabel={verdict ? `${t('home.readyTitle')}. ${t(`verdict.${verdict.level}`)}` : undefined}
+        onPress={() => router.push(verdict ? '/ready/result' : '/ready')}
+        right={verdict ? <Badge tone={VERDICT_TONE[verdict.level]} label={t(`verdict.${verdict.level}`)} /> : undefined}
       />
 
       <Section title={t('home.casesTitle')}>
@@ -50,14 +52,6 @@ export default function Home() {
       </Section>
     </Screen>
   );
-}
-
-function ReadyBadge() {
-  const { t } = useSession();
-  const { data } = useStore();
-  if (!data.profile || !data.readinessCar) return null;
-  const { verdict } = computeBudget({ profile: data.profile, car: data.readinessCar, now: new Date() });
-  return <Badge tone={VERDICT_TONE[verdict.level]} label={t(`verdict.${verdict.level}`)} />;
 }
 
 function CaseCard({ c }: { c: PurchaseCase }) {

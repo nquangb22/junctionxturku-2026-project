@@ -1,8 +1,9 @@
 import { Stack, router } from 'expo-router';
-import { Alert, Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
+import { confirmAction, notify } from '@/ui/dialog';
 import { Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Settings() {
@@ -14,20 +15,27 @@ export default function Settings() {
     { value: false, label: t('common.no') },
   ];
 
-  const exportData = () => Share.share({ message: JSON.stringify(data, null, 2) });
+  const exportData = async () => {
+    try {
+      await Share.share({ message: JSON.stringify(data, null, 2) });
+    } catch (e) {
+      notify(t('common.error', { error: e instanceof Error ? e.message : String(e) }));
+    }
+  };
 
   const confirmWipe = () =>
-    Alert.alert(t('settings.deleteAll'), t('settings.deleteConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('settings.deleteAll'),
-        style: 'destructive',
-        onPress: async () => {
-          await wipeEverything();
-          router.replace('/');
-        },
+    confirmAction({
+      title: t('settings.deleteAll'),
+      message: t('settings.deleteConfirm'),
+      confirmLabel: t('settings.deleteAll'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+      onConfirm: () => {
+        // Leave this screen while the navigator is still mounted: the wipe unmounts the whole app tree.
+        router.replace('/');
+        void wipeEverything();
       },
-    ]);
+    });
 
   return (
     <Screen>
@@ -36,7 +44,7 @@ export default function Settings() {
         <Choice
           label={t('settings.language')}
           value={prefs.locale}
-          onChange={(locale) => setPrefs({ ...prefs, locale })}
+          onChange={(locale) => void setPrefs({ ...prefs, locale })}
           options={[
             { value: 'en', label: 'English' },
             { value: 'fi', label: 'Suomi' },
@@ -49,7 +57,7 @@ export default function Settings() {
           <Txt variant="small">{t('settings.lockUnavailable')}</Txt>
         ) : (
           <>
-            <Choice label={t('settings.lock')} value={prefs.biometricLock} onChange={(biometricLock) => setPrefs({ ...prefs, biometricLock })} options={onOff} />
+            <Choice label={t('settings.lock')} value={prefs.biometricLock} onChange={(biometricLock) => void setPrefs({ ...prefs, biometricLock })} options={onOff} />
             <Txt variant="caption">{t('settings.lockHint')}</Txt>
           </>
         )}
@@ -58,16 +66,21 @@ export default function Settings() {
       <Section title={t('settings.demo')}>
         <Txt variant="small">{t('settings.llmMock')}</Txt>
         <Choice label={t('settings.llmMock')} value={data.llmMock} onChange={(llmMock) => patch({ llmMock })} options={onOff} />
-        <Txt variant="small">{t('settings.skipLock')}</Txt>
-        <Choice label={t('settings.skipLock')} value={prefs.skipLockInDemo} onChange={(skipLockInDemo) => setPrefs({ ...prefs, skipLockInDemo })} options={onOff} />
+        {__DEV__ ? (
+          <>
+            <Txt variant="small">{t('settings.skipLock')}</Txt>
+            <Choice label={t('settings.skipLock')} value={prefs.skipLockInDemo} onChange={(skipLockInDemo) => void setPrefs({ ...prefs, skipLockInDemo })} options={onOff} />
+          </>
+        ) : null}
       </Section>
 
       <Section title={t('settings.privacyTitle')}>
         <Card>
           <Txt>{t('settings.privacyBody')}</Txt>
         </Card>
+        {Platform.OS === 'web' ? <Txt variant="small">{t('settings.webNote')}</Txt> : null}
         {saveError ? <Txt variant="small">{t('common.error', { error: saveError })}</Txt> : null}
-        <Button kind="secondary" label={t('settings.export')} onPress={exportData} />
+        <Button kind="secondary" label={t('settings.export')} onPress={() => void exportData()} />
         <Button kind="danger" label={t('settings.deleteAll')} onPress={confirmWipe} />
       </Section>
     </Screen>

@@ -15,6 +15,7 @@ export const en = {
   'common.no': 'No',
   'common.copied': 'Copied',
   'common.error': 'Something went wrong: {error}',
+  'common.saveFailed': 'Could not save your latest changes. They may be lost if you close the app.',
 
   'welcome.title': 'Your data stays on this phone',
   'welcome.p1': 'Income, savings, car ads and seller details are stored encrypted on this device and locked with Face ID or fingerprint.',
@@ -29,6 +30,9 @@ export const en = {
   'lock.failed': 'Could not unlock. Try again.',
   'lock.keyLost': 'The encryption key is gone (for example, your biometrics changed). The saved data cannot be read.',
   'lock.reset': 'Delete everything and start again',
+  'lock.corrupt': 'The saved data could not be read. The file has not been changed, so you can try again before deleting anything.',
+  'lock.loadError': 'Could not open the saved data. Nothing was deleted. Try again.',
+  'lock.retry': 'Try again',
 
   'home.tagline': 'Buy a used car without nasty surprises.',
   'home.readyTitle': 'Can I afford a car?',
@@ -261,6 +265,8 @@ export const en = {
   'insure.payloadTitle': 'Exactly what will be shared with If',
   'insure.notShared': 'Never shared: income, savings, your checks, evidence, seller details.',
   'insure.consent': 'Share this and get a quote',
+  'insure.needProfile': 'Add your budget details first. They are needed for the insurance request, and we will not guess them.',
+  'insure.toProfile': 'Set up my budget',
   'insure.quote': 'Quote: {amount} / month (demo)',
   'insure.bind': 'Accept and insure',
   'insure.register': 'File the ownership change (demo)',
@@ -296,6 +302,10 @@ export const en = {
   'settings.deleteConfirm': 'This deletes all cases, your budget and the encryption key. It cannot be undone.',
   'settings.privacyTitle': 'Privacy',
   'settings.privacyBody': 'Everything is stored encrypted on this phone. Ad text is redacted before it could reach any server. Nothing goes to If unless you tap “Share and get a quote”.',
+  'settings.webNote': 'Web demo: data is stored unencrypted in this browser. Do not enter real personal data.',
+  'error.title': 'Something went wrong',
+  'error.body': 'The app hit an unexpected error. Your saved data has not been changed.',
+  'error.retry': 'Try again',
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -114,8 +114,17 @@ export function claimForItem(c: Pick<PurchaseCase, 'claims'>, item: Verification
 
 /* ---------- evidence creation ---------- */
 
+/** Next free `${prefix}${n}` id: highest existing numeric suffix + 1, so ids stay unique after removals. */
+export function nextNumericId(ids: string[], prefix: string): string {
+  const max = ids.reduce((m, id) => {
+    const n = id.startsWith(prefix) ? Number(id.slice(prefix.length)) : NaN;
+    return Number.isInteger(n) && n > m ? n : m;
+  }, 0);
+  return `${prefix}${max + 1}`;
+}
+
 export function nextEvidenceId(c: Pick<PurchaseCase, 'evidence'>): string {
-  return `e${c.evidence.length + 1}`;
+  return nextNumericId(c.evidence.map((e) => e.id), 'e');
 }
 
 /** Builds a user-entered piece of evidence. Strength is derived from the kind (§4.1 rule 1). */
@@ -148,10 +157,10 @@ const monthYear = (iso: string) => {
  */
 export function registryEvidence(c: PurchaseCase, reg: RegistryCheck, now: Date): Evidence[] {
   const out: Evidence[] = [];
-  const startIndex = c.evidence.length;
+  const firstId = Number(nextEvidenceId(c).slice(1));
   const add = (itemId: string, outcome: Evidence['outcome'], findings: Finding[], facts: EvidenceFact[] = []) => {
     out.push({
-      id: `e${startIndex + out.length + 1}`,
+      id: `e${firstId + out.length}`,
       kind: 'registry_result',
       strength: 'official',
       itemIds: [itemId],
@@ -233,12 +242,21 @@ export function registryEvidence(c: PurchaseCase, reg: RegistryCheck, now: Date)
   }
 }
 
+/** Order-insensitive set of lowercase, diacritic-free name tokens. */
+const nameTokens = (s: string): string[] =>
+  [...new Set(s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean))].sort();
+
+function sameName(a: string, b: string): boolean {
+  const ta = nameTokens(a);
+  const tb = nameTokens(b);
+  return ta.length > 0 && ta.length === tb.length && ta.every((t, i) => t === tb[i]);
+}
+
 /** Compares the name the buyer read from the seller's ID with the registered owner (on device only). */
 export function ownerComparisonEvidence(c: PurchaseCase, sellerNameFromId: string, now: Date): Evidence | undefined {
   const owner = c.registry?.ownership?.ownerNameLocal;
   if (!owner) return undefined;
-  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
-  const matches = norm(owner) === norm(sellerNameFromId);
+  const matches = sameName(owner, sellerNameFromId);
   return {
     id: nextEvidenceId(c),
     kind: 'registry_result',

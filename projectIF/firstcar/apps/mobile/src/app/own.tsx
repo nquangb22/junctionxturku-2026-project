@@ -14,14 +14,25 @@ export default function Own() {
   const { data, patch } = useStore();
   const p = usePalette();
   const [denied, setDenied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>();
   const owned = data.cases.filter((c) => c.status === 'owned' || c.status === 'registered');
   const now = new Date();
 
+  // Once on, useReminderSync (root layout) keeps the schedule current as cases change.
   const enable = async () => {
-    const all = owned.flatMap((c) => remindersFor(c, now, prefs.locale));
-    const result = await scheduleReminders(all, now);
-    setDenied(result !== 'scheduled');
-    if (result === 'scheduled') patch({ remindersOn: true });
+    setBusy(true);
+    setError(undefined);
+    try {
+      const all = owned.flatMap((c) => remindersFor(c, now, prefs.locale));
+      const result = await scheduleReminders(all, now);
+      setDenied(result !== 'scheduled');
+      if (result === 'scheduled') patch({ remindersOn: true });
+    } catch (e) {
+      setError(t('common.error', { error: e instanceof Error ? e.message : String(e) }));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -33,8 +44,9 @@ export default function Own() {
       ))}
       {owned.length ? (
         <>
-          <Button kind={data.remindersOn ? 'secondary' : 'primary'} label={data.remindersOn ? `✓ ${t('own.enabled')}` : t('own.enable')} onPress={enable} />
+          <Button kind={data.remindersOn ? 'secondary' : 'primary'} label={data.remindersOn ? `✓ ${t('own.enabled')}` : t('own.enable')} onPress={enable} loading={busy} />
           {denied ? <Txt color={p.warning}>{t('own.denied')}</Txt> : null}
+          {error ? <Txt color={p.danger}>{error}</Txt> : null}
         </>
       ) : null}
     </Screen>

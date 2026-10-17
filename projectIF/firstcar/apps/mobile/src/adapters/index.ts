@@ -3,14 +3,16 @@
  * so swapping in Supabase `extract-claims`, Traficom and If later changes no screen code.
  */
 import {
+  COVER_FACTOR,
   DEMO_ADS,
+  FIRST_TIME_DRIVER_FACTOR,
+  INSURANCE_YEARLY,
   MOCK_PLATES,
   MOCK_REGISTRY,
   analyseAd,
   normaliseForMatch,
   prepareAd,
   type AnalysedAd,
-  type CoverIntent,
   type InsuranceHandoff,
   type Listing,
   type Money,
@@ -58,13 +60,10 @@ export async function lookupRegistry(plate: string, now: Date): Promise<Registry
 
 /* ---------- If hand-off (if-mock) ---------- */
 
-const MOCK_YEARLY: Record<InsuranceHandoff['payload']['buyerAgeBand'], number> = { '18-19': 1050, '20-25': 780, '26-34': 540, '35+': 440 };
-const MOCK_COVER: Record<CoverIntent, number> = { liability_only: 1, liability_plus_partial: 1.22, liability_plus_comprehensive: 1.55 };
-
 /** Demo quote. Uses only the consented payload: nothing else is available to the insurer. */
 export async function requestQuote(payload: InsuranceHandoff['payload']): Promise<Money> {
   await wait(MOCK_LATENCY_MS);
-  const yearly = MOCK_YEARLY[payload.buyerAgeBand] * MOCK_COVER[payload.coverIntent] * (payload.firstTimeDriver ? 1.1 : 1);
+  const yearly = INSURANCE_YEARLY[payload.buyerAgeBand] * COVER_FACTOR[payload.coverIntent] * (payload.firstTimeDriver ? FIRST_TIME_DRIVER_FACTOR : 1);
   return { minor: Math.round((yearly / 12) * 100), currency: 'EUR' };
 }
 

@@ -4,9 +4,17 @@ const ZERO_WIDTH = /[​-‍⁠﻿]/g;
 
 export const MAX_AD_CHARS = 8000;
 
-/** Cleans pasted ad text: NFC, no zero-width chars, unified line breaks, capped length. */
+/** Slices to `max` UTF-16 units without splitting a surrogate pair. */
+function truncateSafely(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const last = s.charCodeAt(max - 1);
+  return s.slice(0, last >= 0xd800 && last <= 0xdbff ? max - 1 : max);
+}
+
+/** Cleans pasted ad text: NFKC (matches redaction), no zero-width chars, unified line breaks, capped length. */
 export function cleanAdText(raw: string): string {
-  return raw.normalize('NFC').replace(ZERO_WIDTH, '').replace(/\r\n?/g, '\n').slice(0, MAX_AD_CHARS);
+  const cleaned = raw.normalize('NFKC').replace(ZERO_WIDTH, '').replace(/\r\n?/g, '\n');
+  return truncateSafely(cleaned, MAX_AD_CHARS);
 }
 
 /** Canonical form used for cache keys and grounding comparisons. */
