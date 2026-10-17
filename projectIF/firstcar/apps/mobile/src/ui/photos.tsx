@@ -4,12 +4,14 @@
  */
 import { DEMO_ADS, type CarSpec } from '@firstcar/core';
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
+import { PressableScale, SPRING, tick } from '@/ui/motion';
 import { Txt } from '@/ui/primitives';
 
 type Model = 'golf6' | 'golf7' | 'corolla' | 'octavia' | 'passat' | 'focus';
@@ -138,11 +140,22 @@ export function CarGallery({ car, t }: { car: CarLike; t: Translate }) {
       </View>
       <View style={styles.dots}>
         {ANGLES.map((a, i) => (
-          <View key={a} style={[styles.dot, { backgroundColor: i === index ? p.primary : p.borderStrong }]} />
+          <Dot key={a} active={i === index} />
         ))}
       </View>
     </View>
   );
+}
+
+/** Gallery position dot: the current one stretches into a pill. */
+function Dot({ active }: { active: boolean }) {
+  const p = usePalette();
+  const w = useSharedValue(active ? 20 : 7);
+  useEffect(() => {
+    w.set(withSpring(active ? 20 : 7, { ...SPRING, reduceMotion: ReduceMotion.System }));
+  }, [active, w]);
+  const style = useAnimatedStyle(() => ({ width: w.get() }));
+  return <Animated.View style={[styles.dot, style, { backgroundColor: active ? p.primary : p.borderStrong }]} />;
 }
 
 /** Big photo at the top of Home. */
@@ -165,17 +178,18 @@ export function DemoAdCards({ t, selected, onPick, layout }: { t: Translate; sel
     const on = ad.id === selected;
     const [name, note] = ad.label.split(' (');
     return (
-      <Pressable
+      <PressableScale
         key={ad.id}
+        scaleTo={0.96}
         accessibilityRole={layout === 'grid' ? 'radio' : 'button'}
         accessibilityState={layout === 'grid' ? { checked: on } : undefined}
         accessibilityLabel={ad.label}
-        onPress={() => onPick(ad.id)}
-        style={({ pressed }) => [
-          styles.card,
-          layout === 'row' ? styles.cardRow : styles.cardGrid,
-          { backgroundColor: on ? p.primarySoft : p.surface, borderColor: on ? p.primary : p.border, opacity: pressed ? 0.85 : 1 },
-        ]}>
+        onPress={() => {
+          tick();
+          onPick(ad.id);
+        }}
+        containerStyle={layout === 'row' ? styles.cardRow : styles.cardGrid}
+        style={[styles.card, { backgroundColor: on ? p.primarySoft : p.surface, borderColor: on ? p.primary : p.border }]}>
         {front ? <Image source={front} style={[styles.cardImage, { backgroundColor: p.surfaceAlt }]} contentFit="cover" /> : null}
         <View style={styles.cardText}>
           <Txt variant="bodyStrong" numberOfLines={1} color={on ? p.primary : undefined}>
@@ -187,7 +201,7 @@ export function DemoAdCards({ t, selected, onPick, layout }: { t: Translate; sel
             </Txt>
           ) : null}
         </View>
-      </Pressable>
+      </PressableScale>
     );
   });
   if (layout === 'grid') return <View style={styles.grid}>{cards}</View>;
@@ -204,7 +218,7 @@ const styles = StyleSheet.create({
   slide: { aspectRatio: 16 / 10 },
   tag: { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#24150CB3', borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.xs },
-  dot: { width: 7, height: 7, borderRadius: 4 },
+  dot: { height: 7, borderRadius: 4 },
   hero: { width: '100%', aspectRatio: 3 / 2, borderRadius: Radius.lg },
   thumb: { width: 72, height: 54, borderRadius: Radius.md },
   row: { gap: Spacing.md, paddingRight: Spacing.lg },

@@ -1,8 +1,7 @@
 /** Accessible building blocks. Large touch targets (≥ 48 dp), dynamic type, colour + text for state. */
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,11 +10,13 @@ import {
   type TextProps,
   type ViewStyle,
 } from 'react-native';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming, ZoomIn, ZoomOut, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts, MaxContentWidth, Radius, Spacing, toneColors, type StatusTone } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { Icon, type IconName } from '@/ui/icon';
+import { ENTER, LAYOUT, PressableScale, tick } from '@/ui/motion';
 
 /* ---------- text ---------- */
 
@@ -50,15 +51,15 @@ export function Card({ children, style, tone }: { children: ReactNode; style?: S
   const p = usePalette();
   const toned = tone ? toneColors(p, tone) : undefined;
   return (
-    <View style={[styles.card, { backgroundColor: toned?.bg ?? p.surface, borderColor: toned ? `${toned.fg}33` : p.border }, style]}>
+    <Animated.View layout={LAYOUT} style={[styles.card, { backgroundColor: toned?.bg ?? p.surface, borderColor: toned ? `${toned.fg}33` : p.border }, style]}>
       {children}
-    </View>
+    </Animated.View>
   );
 }
 
 export function Section({ title, children, right }: { title: string; children: ReactNode; right?: ReactNode }) {
   return (
-    <View style={styles.section}>
+    <Animated.View entering={ENTER} layout={LAYOUT} style={styles.section}>
       <View style={styles.sectionHeader}>
         <Txt variant="h2" accessibilityRole="header" style={{ flex: 1 }}>
           {title}
@@ -66,7 +67,7 @@ export function Section({ title, children, right }: { title: string; children: R
         {right}
       </View>
       {children}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -131,7 +132,7 @@ export function Button({
   // If-style disabled: a flat grey fill (filled) or grey outline, not a faded copy of the live button.
   const fg = disabled && !loading ? (filled ? p.onPrimary : p.textSecondary) : filled ? p.onPrimary : p.primary;
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
@@ -147,7 +148,7 @@ export function Button({
         },
       ]}>
       {loading ? <ActivityIndicator color={fg} /> : <Text style={[styles.buttonText, { color: fg }]}>{label}</Text>}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -171,27 +172,54 @@ export function Choice<T extends string | number | boolean>({
   label: string;
   disabled?: boolean;
 }) {
-  const p = usePalette();
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel={label} style={styles.chips}>
-      {options.map((o) => {
-        const selected = o.value === value;
-        const off = disabled || o.disabled;
-        return (
-          <Pressable
-            key={String(o.value)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: selected, selected, disabled: off }}
-            aria-checked={selected}
-            disabled={off}
-            onPress={() => onChange(o.value)}
-            style={[styles.chip, { backgroundColor: selected ? p.primarySoft : p.surface, borderColor: selected ? p.primary : p.borderStrong, opacity: off && !selected ? 0.5 : 1 }]}>
-            {selected ? <Icon name="check" size={18} color={p.primary} /> : null}
-            <Text style={[styles.chipText, { color: selected ? p.primary : p.text, fontFamily: selected ? Fonts.semibold : Fonts.medium }]}>{o.label}</Text>
-          </Pressable>
-        );
-      })}
+      {options.map((o) => (
+        <ChoiceChip
+          key={String(o.value)}
+          label={o.label}
+          selected={o.value === value}
+          disabled={disabled || o.disabled}
+          onPress={() => {
+            if (o.value !== value) tick();
+            onChange(o.value);
+          }}
+        />
+      ))}
     </View>
+  );
+}
+
+/** One chip: colours cross-fade on select and the check pops in, so a toggle reads as a change, not a jump. */
+function ChoiceChip({ label, selected, disabled, onPress }: { label: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
+  const p = usePalette();
+  const on = useSharedValue(selected ? 1 : 0);
+  useEffect(() => {
+    on.set(withTiming(selected ? 1 : 0, { duration: 180, reduceMotion: ReduceMotion.System }));
+  }, [on, selected]);
+  const colors = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(on.get(), [0, 1], [p.surface, p.primarySoft]),
+    borderColor: interpolateColor(on.get(), [0, 1], [p.borderStrong, p.primary]),
+  }));
+  const textColor = useAnimatedStyle(() => ({ color: interpolateColor(on.get(), [0, 1], [p.text, p.primary]) }));
+  return (
+    <PressableScale
+      scaleTo={0.95}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, selected, disabled }}
+      aria-checked={selected}
+      disabled={disabled}
+      onPress={onPress}
+      containerStyle={{ opacity: disabled && !selected ? 0.5 : 1 }}>
+      <Animated.View style={[styles.chip, colors]}>
+        {selected ? (
+          <Animated.View entering={ZoomIn.springify().damping(14).stiffness(300).reduceMotion(ReduceMotion.System)} exiting={ZoomOut.duration(120).reduceMotion(ReduceMotion.System)}>
+            <Icon name="check" size={18} color={p.primary} />
+          </Animated.View>
+        ) : null}
+        <Animated.Text style={[styles.chipText, textColor, { fontFamily: selected ? Fonts.semibold : Fonts.medium }]}>{label}</Animated.Text>
+      </Animated.View>
+    </PressableScale>
   );
 }
 
@@ -217,7 +245,8 @@ export function NavCard({
   const p = usePalette();
   const toned = tone ? toneColors(p, tone) : undefined;
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? (subtitle ? `${title}. ${subtitle}` : title)}
       onPress={onPress}
@@ -229,7 +258,7 @@ export function NavCard({
       </View>
       {right}
       <Icon name="chevron" size={20} color={p.textSecondary} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
