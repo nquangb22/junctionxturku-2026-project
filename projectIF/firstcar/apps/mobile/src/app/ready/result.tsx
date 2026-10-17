@@ -1,6 +1,9 @@
 import { computeBudget, deductibleTradeoffs, formatEur, selectScenarios, toEuros, type BudgetLine, type RiskScenario } from '@firstcar/core';
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
+import { Spacing } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
@@ -10,6 +13,7 @@ import { VerdictCard } from '@/ui/verdict-card';
 export default function ReadyResult() {
   const { t, prefs } = useSession();
   const { data } = useStore();
+  const p = usePalette();
   const { from, caseId } = useLocalSearchParams<{ from?: string; caseId?: string }>();
   if (!data.profile || !data.readinessCar) return <Redirect href="/ready" />;
 
@@ -56,15 +60,28 @@ export default function ReadyResult() {
 
       <Section title={t('result.tradeoffTitle')}>
         <Card>
+          <View style={styles.tableRow}>
+            {(['result.colDeductible', 'result.colPremium', 'result.colBuffer'] as const).map((k) => (
+              <Txt key={k} variant="caption" style={styles.cell}>
+                {t(k)}
+              </Txt>
+            ))}
+          </View>
           {tradeoffs.map((r) => (
-            <Txt key={r.deductible.minor} variant="small">
-              {t('result.tradeoffRow', {
-                deductible: formatEur(r.deductible),
-                delta: `${r.premiumDeltaYearlyEur > 0 ? '+' : ''}${r.premiumDeltaYearlyEur} €`,
-                buffer: formatEur(r.bufferNeeded),
-              })}
-            </Txt>
+            <View key={r.deductible.minor} style={[styles.tableRow, r.isChoice ? { backgroundColor: p.surfaceAlt } : null]} accessible accessibilityLabel={`${t('result.colDeductible')} ${formatEur(r.deductible)}, ${t('result.colPremium')} ${formatEur(r.premiumYearly)}, ${t('result.colBuffer')} ${formatEur(r.bufferNeeded)}${r.isChoice ? `, ${t('result.yourChoice')}` : ''}`}>
+              <Txt variant={r.isChoice ? 'bodyStrong' : 'body'} style={styles.cell}>
+                {formatEur(r.deductible)}
+                {r.isChoice ? `\n(${t('result.yourChoice')})` : ''}
+              </Txt>
+              <Txt variant={r.isChoice ? 'bodyStrong' : 'body'} style={styles.cell}>
+                {formatEur(r.premiumYearly)}
+              </Txt>
+              <Txt variant={r.isChoice ? 'bodyStrong' : 'body'} style={styles.cell}>
+                {formatEur(r.bufferNeeded)}
+              </Txt>
+            </View>
           ))}
+          <Txt variant="small">{t('result.tradeoffNote')}</Txt>
           <Txt variant="caption">⚠️ {t('common.estimate')}</Txt>
         </Card>
       </Section>
@@ -111,3 +128,8 @@ function ScenarioCard({ s, t }: { s: RiskScenario; t: Translate }) {
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  tableRow: { flexDirection: 'row', gap: Spacing.sm, paddingVertical: Spacing.xs, paddingHorizontal: Spacing.xs, borderRadius: 6 },
+  cell: { flex: 1 },
+});

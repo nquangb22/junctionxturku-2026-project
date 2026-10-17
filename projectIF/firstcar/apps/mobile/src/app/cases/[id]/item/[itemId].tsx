@@ -231,8 +231,8 @@ function AddEvidence({ c, item, onResult }: { c: PurchaseCase; item: Verificatio
   const [note, setNote] = useState('');
 
   const add = () => {
-    if (!kind) return;
-    const err = caseEvent(c.id, { type: 'evidence_added', kind, itemIds: [item.id], outcome, note: note.trim() || undefined });
+    if (!kind || !note.trim()) return;
+    const err = caseEvent(c.id, { type: 'evidence_added', kind, itemIds: [item.id], outcome, note: note.trim() });
     onResult(err);
     if (err) return;
     setKind(undefined);
@@ -258,12 +258,13 @@ function AddEvidence({ c, item, onResult }: { c: PurchaseCase; item: Verificatio
           <TextInput
             value={note}
             onChangeText={setNote}
-            placeholder="…"
+            placeholder={t('item.evidenceNote')}
             placeholderTextColor={p.textSecondary}
-            accessibilityLabel={t('item.evidence')}
+            accessibilityLabel={t('item.evidenceNote')}
+            maxLength={280}
             style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
           />
-          <Button label={t('item.addEvidence')} onPress={add} />
+          <Button label={t('item.addEvidence')} onPress={add} disabled={!note.trim()} />
         </Card>
       ) : null}
     </Section>

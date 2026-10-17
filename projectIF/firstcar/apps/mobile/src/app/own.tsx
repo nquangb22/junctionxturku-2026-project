@@ -1,5 +1,6 @@
 import { beltDueCost, computeBudget, formatEur, isStale, itemTitle, remindersFor, renderFinding, type PurchaseCase, type Reminder } from '@firstcar/core';
 import { Stack, router } from 'expo-router';
+import { Platform } from 'react-native';
 import { useState } from 'react';
 
 import { usePalette } from '@/hooks/use-palette';
@@ -15,6 +16,7 @@ export default function Own() {
   const { data, patch } = useStore();
   const p = usePalette();
   const [denied, setDenied] = useState(false);
+  const [webOnly, setWebOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const owned = data.cases.filter((c) => c.status === 'owned' || c.status === 'registered');
@@ -24,6 +26,17 @@ export default function Own() {
   const enable = async () => {
     setBusy(true);
     setError(undefined);
+    // The web demo cannot schedule notifications: ask the browser anyway, then say where reminders really work.
+    if (Platform.OS === 'web') {
+      try {
+        await globalThis.Notification?.requestPermission();
+      } catch {
+        // unsupported: same message
+      }
+      setWebOnly(true);
+      setBusy(false);
+      return;
+    }
     try {
       const all = owned.flatMap((c) => remindersFor(c, now, prefs.locale));
       const result = await scheduleReminders(all, now);
@@ -47,6 +60,7 @@ export default function Own() {
         <>
           <Button kind={data.remindersOn ? 'secondary' : 'primary'} label={data.remindersOn ? `✓ ${t('own.enabled')}` : t('own.enable')} onPress={enable} loading={busy} />
           {denied ? <Txt color={p.warning}>{t('own.denied')}</Txt> : null}
+          {webOnly ? <Txt color={p.warning}>{t('own.webOnly')}</Txt> : null}
           {error ? <Txt color={p.danger}>{error}</Txt> : null}
         </>
       ) : null}

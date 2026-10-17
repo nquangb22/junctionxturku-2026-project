@@ -173,10 +173,18 @@ export const DEDUCTIBLE_OPTIONS_EUR = [150, 300, 500] as const; // typical optio
 
 export function deductibleTradeoffs(profile: BuyerProfile, budget: OwnershipBudget) {
   const baseDeductible = toEuros(profile.deductible);
-  return DEDUCTIBLE_OPTIONS_EUR.map((d) => ({
-    deductible: eur(d),
+  const insurance = budget.lines.find((l) => l.key === 'insurance');
+  const baseYearly = insurance ? toEuros(insurance.monthly) * 12 : 0;
+  return DEDUCTIBLE_OPTIONS_EUR.map((d) => {
     // ⚠️ assumption: each +€100 deductible saves ~2 % of the comprehensive premium
-    premiumDeltaYearlyEur: Math.round(-((d - baseDeductible) / 100) * 0.02 * INSURANCE_YEARLY[profile.ageBand] * COVER_FACTOR[profile.coverIntent]),
-    bufferNeeded: eur(toEuros(budget.buffer.recommended) - baseDeductible + d),
-  }));
+    const premiumDeltaYearlyEur = Math.round(-((d - baseDeductible) / 100) * 0.02 * INSURANCE_YEARLY[profile.ageBand] * COVER_FACTOR[profile.coverIntent]);
+    return {
+      deductible: eur(d),
+      premiumDeltaYearlyEur,
+      /** Absolute yearly premium at this deductible (the budget's premium plus the delta). */
+      premiumYearly: eur(Math.round(baseYearly + premiumDeltaYearlyEur)),
+      bufferNeeded: eur(toEuros(budget.buffer.recommended) - baseDeductible + d),
+      isChoice: d === baseDeductible,
+    };
+  });
 }

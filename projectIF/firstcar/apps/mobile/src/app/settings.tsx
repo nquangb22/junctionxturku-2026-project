@@ -63,17 +63,6 @@ export default function Settings() {
         )}
       </Section>
 
-      <Section title={t('settings.demo')}>
-        <Txt variant="small">{t('settings.llmMock')}</Txt>
-        <Choice label={t('settings.llmMock')} value={data.llmMock} onChange={(llmMock) => patch({ llmMock })} options={onOff} />
-        {__DEV__ ? (
-          <>
-            <Txt variant="small">{t('settings.skipLock')}</Txt>
-            <Choice label={t('settings.skipLock')} value={prefs.skipLockInDemo} onChange={(skipLockInDemo) => void setPrefs({ ...prefs, skipLockInDemo })} options={onOff} />
-          </>
-        ) : null}
-      </Section>
-
       <Section title={t('settings.privacyTitle')}>
         <Card>
           <Txt>{t('settings.privacyBody')}</Txt>
@@ -83,6 +72,20 @@ export default function Settings() {
         <Button kind="secondary" label={t('settings.export')} onPress={() => void exportData()} />
         <Button kind="danger" label={t('settings.deleteAll')} onPress={confirmWipe} />
       </Section>
+      <Section title={t('settings.demo')}>
+        <Txt variant="caption">{t('settings.demoHint')}</Txt>
+        <Txt variant="small">{t('settings.llmMock')}</Txt>
+        <Txt variant="caption">{t('settings.llmMockHint')}</Txt>
+        <Choice label={t('settings.llmMock')} value={data.llmMock} onChange={(llmMock) => patch({ llmMock })} options={onOff} />
+        {__DEV__ ? (
+          <>
+            <Txt variant="small">{t('settings.skipLock')}</Txt>
+            <Txt variant="caption">{t('settings.skipLockHint')}</Txt>
+            <Choice label={t('settings.skipLock')} value={prefs.skipLockInDemo} onChange={(skipLockInDemo) => void setPrefs({ ...prefs, skipLockInDemo })} options={onOff} />
+          </>
+        ) : null}
+      </Section>
+
     </Screen>
   );
 }
