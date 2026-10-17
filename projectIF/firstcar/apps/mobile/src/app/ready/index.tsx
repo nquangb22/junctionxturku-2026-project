@@ -1,10 +1,15 @@
-import { eur, type AgeBand, type BuyerProfile, type CarSpec, type CoverIntent, type Density, type Money, type PaymentMethod, type Range } from '@firstcar/core';
+import { eur, formatEur, type AgeBand, type BuyerProfile, type CarSpec, type CoverIntent, type Density, type Money, type PaymentMethod, type Range } from '@firstcar/core';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { StyleSheet, TextInput } from 'react-native';
+
+import { Radius, Spacing } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
-import { Badge, Button, Choice, Screen, Section } from '@/ui/primitives';
+import { carForCase, caseTitle } from '@/ui/case-helpers';
+import { Badge, Button, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 /** Typical first cars. Values are demo presets, labelled as such in the budget provenance. */
 const CAR_PRESETS: Record<string, CarSpec> = {
@@ -30,17 +35,45 @@ const SAVINGS: Record<string, Range<Money> | undefined> = {
   skip: undefined,
 };
 
+const OPEN_CASE = new Set(['reviewing_claims', 'checking', 'inspecting', 'contract_prep', 'ready_to_buy']);
+const sameCar = (a?: CarSpec, b?: CarSpec) => !!a && !!b && a.make === b.make && a.model === b.model && a.modelYear === b.modelYear && a.price?.minor === b.price?.minor;
+
 const bandKey = (table: Record<string, Range<Money> | undefined>, value?: Range<Money>) =>
   Object.entries(table).find(([, v]) => v && value && v.low.minor === value.low.minor)?.[0] ?? (value ? undefined : 'skip');
 
 export default function ReadyInputs() {
   const { t, prefs } = useSession();
   const { data, patch } = useStore();
+  const p = usePalette();
   // Where the flow was started from, so the result can send the user back there.
   const { from, caseId } = useLocalSearchParams<{ from?: string; caseId?: string }>();
   const prev = data.profile;
 
-  const [car, setCar] = useState<string | undefined>(Object.entries(CAR_PRESETS).find(([, c]) => c.model === data.readinessCar?.model)?.[0]);
+  // The user's own open cases come first, then the demo presets, then a custom price.
+  const caseCars = data.cases
+    .filter((c) => OPEN_CASE.has(c.status))
+    .map((c) => ({ c, spec: carForCase(c) }))
+    .filter((x): x is { c: (typeof data.cases)[number]; spec: CarSpec } => !!x.spec?.price);
+  const initialCar = (): string | undefined => {
+    const current = data.readinessCar;
+    if (!current) return undefined;
+    const fromCase = caseCars.find((x) => sameCar(x.spec, current));
+    if (fromCase) return `case:${fromCase.c.id}`;
+    const preset = Object.entries(CAR_PRESETS).find(([, c]) => sameCar(c, current));
+    return preset ? preset[0] : 'other';
+  };
+  const [car, setCar] = useState<string | undefined>(initialCar);
+  const [otherPrice, setOtherPrice] = useState(() => (car === 'other' && data.readinessCar?.price ? String(data.readinessCar.price.minor / 100) : ''));
+  const otherEur = Number(otherPrice.replace(/\s/g, ''));
+  const otherValid = Number.isFinite(otherEur) && otherEur >= 300 && otherEur <= 200_000;
+
+  const resolveCar = (): CarSpec | undefined => {
+    if (!car) return undefined;
+    if (car.startsWith('case:')) return caseCars.find((x) => `case:${x.c.id}` === car)?.spec;
+    // Custom price: other costs use a typical 10-year-old petrol car (team assumption, said on screen).
+    if (car === 'other') return otherValid ? { make: t('ready.otherCar'), model: '', modelYear: new Date().getFullYear() - 10, fuel: 'petrol', price: eur(otherEur), fieldProvenance: {} } : undefined;
+    return CAR_PRESETS[car];
+  };
   const [density, setDensity] = useState<Density | undefined>(prev?.density);
   const [age, setAge] = useState<AgeBand | undefined>(prev?.ageBand);
   const [firstTime, setFirstTime] = useState<boolean | undefined>(prev?.firstTimeDriver);
@@ -50,7 +83,7 @@ export default function ReadyInputs() {
   const [deductible, setDeductible] = useState<number>(prev ? prev.deductible.minor / 100 : 300);
   const [payment, setPayment] = useState<PaymentMethod | undefined>(prev?.payment);
 
-  const complete = car && density && age && firstTime !== undefined && income && savings && payment;
+  const complete = resolveCar() && density && age && firstTime !== undefined && income && savings && payment;
 
   const calculate = () => {
     if (!complete) return;
@@ -66,7 +99,7 @@ export default function ReadyInputs() {
       deductible: eur(deductible),
       payment,
     };
-    patch({ profile, readinessCar: CAR_PRESETS[car] });
+    patch({ profile, readinessCar: resolveCar() });
     router.replace({ pathname: '/ready/result', params: from && caseId ? { from, caseId } : {} });
   };
 
@@ -82,8 +115,28 @@ export default function ReadyInputs() {
           label={t('ready.car')}
           value={car}
           onChange={setCar}
-          options={Object.entries(CAR_PRESETS).map(([k, c]) => ({ value: k, label: `${c.make === 'Volkswagen' ? 'VW' : c.make} ${c.model} ${c.modelYear} · ${(c.price!.minor / 100).toLocaleString('fi-FI')} €` }))}
+          options={[
+            ...caseCars.map(({ c, spec }) => ({ value: `case:${c.id}`, label: t('ready.yourCase', { car: caseTitle(c), price: formatEur(spec.price!) }) })),
+            ...Object.entries(CAR_PRESETS).map(([k, c]) => ({ value: k, label: `${c.make === 'Volkswagen' ? 'VW' : c.make} ${c.model} ${c.modelYear} · ${(c.price!.minor / 100).toLocaleString('fi-FI')} €` })),
+            { value: 'other', label: t('ready.otherPrice') },
+          ]}
         />
+        {car === 'other' ? (
+          <>
+            <TextInput
+              autoFocus
+              value={otherPrice}
+              onChangeText={setOtherPrice}
+              keyboardType="number-pad"
+              placeholder={t('ready.otherPriceInput')}
+              placeholderTextColor={p.textSecondary}
+              accessibilityLabel={t('ready.otherPriceInput')}
+              maxLength={7}
+              style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+            />
+            <Txt variant="caption">{t('ready.otherCarNote')}</Txt>
+          </>
+        ) : null}
       </Section>
       <Section title={t('ready.region')}>
         <Choice label={t('ready.region')} value={density} onChange={setDensity} options={(['urban', 'suburban', 'rural'] as const).map((d) => ({ value: d, label: t(`density.${d}`) }))} />
@@ -117,3 +170,7 @@ export default function ReadyInputs() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  input: { minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 18 },
+});

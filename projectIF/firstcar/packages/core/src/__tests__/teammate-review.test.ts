@@ -205,3 +205,31 @@ describe('quote translations (T5)', () => {
     expect(translateQuote('Moottori käy tasaisesti', 'fi')).toBeNull();
   });
 });
+
+describe('price claim (E11)', () => {
+  it('extracts the asking price from every demo ad that states one', () => {
+    for (const ad of DEMO_ADS) {
+      const c = newCase(ad.id);
+      if (!c.listing.car.price) continue;
+      const price = c.claims.find((cl) => cl.type === 'price');
+      expect(price?.value, ad.id).toEqual({ kind: 'money', eur: c.listing.car.price.minor / 100 });
+    }
+  });
+});
+
+describe('required clauses and undo (S9, E13)', () => {
+  it('refuses to leave out a required clause', () => {
+    const c = golf();
+    expect(applyEvent(c, { type: 'clause_toggled', clauseId: 'parties' }, ctx)).toEqual({ ok: false, error: 'clause_required' });
+  });
+
+  it('restores a removed claim in place with its highlight', () => {
+    const c = newCase('golf-odometer');
+    const index = 2;
+    const claim = c.claims[index]!;
+    const removed = apply(c, { type: 'claim_removed', claimId: claim.id });
+    const restored = apply(removed, { type: 'claim_restored', claim, index });
+    expect(restored.claims).toEqual(c.claims);
+    expect(applyEvent(restored, { type: 'claim_restored', claim, index }, ctx)).toEqual({ ok: false, error: 'claim_exists' });
+  });
+});

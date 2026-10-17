@@ -1,6 +1,6 @@
 import { CLAIM_TITLES, quoteTranslationFor, type ClaimType, type ClaimValue, type SellerClaim } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
@@ -30,6 +30,14 @@ export default function ClaimsReview() {
   const [addTitle, setAddTitle] = useState('');
   const [addNote, setAddNote] = useState('');
   const [added, setAdded] = useState<string | undefined>();
+  const [removed, setRemoved] = useState<{ claim: SellerClaim; index: number } | undefined>();
+
+  // The undo row disappears after about five seconds.
+  useEffect(() => {
+    if (!removed) return;
+    const timer = setTimeout(() => setRemoved(undefined), 5000);
+    return () => clearTimeout(timer);
+  }, [removed]);
 
   if (!c) return <Redirect href="/" />;
   const editable = c.status === 'reviewing_claims';
@@ -53,6 +61,18 @@ export default function ClaimsReview() {
     setAddType(undefined);
     setAddTitle('');
     setAddNote('');
+  };
+
+  const remove = (claim: SellerClaim) => {
+    const index = c.claims.findIndex((cl) => cl.id === claim.id);
+    if (!caseEvent(c.id, { type: 'claim_removed', claimId: claim.id })) setRemoved({ claim, index });
+  };
+
+  const undoRemove = () => {
+    if (!removed) return;
+    caseEvent(c.id, { type: 'claim_restored', claim: removed.claim, index: removed.index });
+    setFocus(removed.claim.id);
+    setRemoved(undefined);
   };
 
   const selectType = (type: ClaimType) => {
@@ -87,6 +107,16 @@ export default function ClaimsReview() {
       </Section>
 
       <Section title={t('claims.title')}>
+        {removed ? (
+          <Card tone="neutral">
+            <View style={styles.row}>
+              <Txt style={{ flex: 1 }} accessibilityLiveRegion="polite">
+                {t('claims.removed', { title: claimTitle(removed.claim, prefs.locale) })}
+              </Txt>
+              <Button kind="secondary" label={t('claims.undo')} onPress={undoRemove} />
+            </View>
+          </Card>
+        ) : null}
         {c.claims.length === 0 ? <Txt>{t('claims.none')}</Txt> : null}
         {c.claims.map((cl) => (
           <ClaimRow
@@ -96,7 +126,7 @@ export default function ClaimsReview() {
             locale={prefs.locale}
             focused={focus === cl.id}
             onFocus={() => setFocus(cl.id)}
-            onRemove={editable ? () => caseEvent(c.id, { type: 'claim_removed', claimId: cl.id }) : undefined}
+            onRemove={editable ? () => remove(cl) : undefined}
             onEdit={editable ? (value, quote) => caseEvent(c.id, { type: 'claim_edited', claimId: cl.id, value, quote }) : undefined}
           />
         ))}

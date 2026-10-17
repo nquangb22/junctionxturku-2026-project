@@ -6,7 +6,7 @@
 import type { Locale, SellerClaim } from './types';
 
 // Finnish compounds put the stem mid-word (talvi|renkaat), so stems match anywhere; short words need whole-word matches.
-const FI_HINT = /[äöå]|(ajettu|omistaja|huolto|jakohihna|ruoste|kolariton|katsastettu|renkaat|avain|vaihdettu)|\b(uudet|olen|mukana)\b/i;
+const FI_HINT = /[äöå]|(ajettu|omistaja|huolto|jakohihna|ruoste|kolariton|katsastettu|renkaat|avain|vaihdettu)|\b(uudet|olen|mukana|hinta)\b/i;
 
 /** Best-effort language of a quote. Finnish letters or common ad words mean Finnish. */
 export function detectQuoteLang(text: string): Locale {
@@ -33,6 +33,7 @@ const FI_TO_EN: Rule[] = [
   [/^huoltokirja löytyy$/i, 'Service book available'],
   [/^huoltokirja mukana$/i, 'Service book included'],
   [/^olen tällä hetkellä ulkomailla$/i, 'I am abroad at the moment'],
+  [/^hinta:? ?(.+)$/i, (amount) => `Price ${amount}`],
 ];
 
 const EN_TO_FI: Rule[] = [
@@ -46,6 +47,7 @@ const EN_TO_FI: Rule[] = [
   [/^service book$/i, 'Huoltokirja'],
   [/^inspected (.+)$/i, (when) => `Katsastettu ${when}`],
   [/^two keys$/i, 'Kaksi avainta'],
+  [/^(?:price|pris):? ?(.+)$/i, (amount) => `Hinta ${amount}`],
 ];
 
 /** Translation of `quote` into the other language, or null when no rule covers it. */

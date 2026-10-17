@@ -121,6 +121,9 @@ const ASSURANCE_EXCLUDED = new Set(['seller_situation', 'other', 'price']);
 
 const BLANK = '______';
 
+/** Clauses every sale contract needs: they cannot be left out. */
+export const REQUIRED_CLAUSES: ReadonlySet<ContractClause['kind']> = new Set(['parties', 'vehicle_identity', 'price_payment', 'handover_time']);
+
 /**
  * Contract blank values: what the buyer typed, else what the case already knows
  * (a verified owner's name, the registry VIN), else a blank line to fill by hand.

@@ -1,4 +1,4 @@
-import { CONTRACT_DISCLAIMER, contractFieldValues, contractText, type ContractField, type PurchaseCase } from '@firstcar/core';
+import { CONTRACT_DISCLAIMER, REQUIRED_CLAUSES, contractFieldValues, contractText, type ContractField, type PurchaseCase } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
@@ -59,25 +59,32 @@ export default function Contract() {
         </Card>
       ) : null}
       {editable ? <ContractFields c={c} /> : null}
-      {c.clauses.map((cl) => (
-        <Pressable
-          key={cl.id}
-          disabled={!editable}
-          onPress={() => caseEvent(c.id, { type: 'clause_toggled', clauseId: cl.id })}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: cl.included, disabled: !editable }}
-          aria-checked={cl.included}
-          style={[styles.clause, { borderColor: cl.kind === 'disputed_claim' ? p.danger : cl.kind === 'seller_assurance' ? p.warning : p.border, backgroundColor: cl.included ? p.surface : p.surfaceAlt }]}>
-          <View style={styles.head}>
-            <Txt variant="h2" importantForAccessibility="no">
-              {cl.included ? '☑' : '☐'}
-            </Txt>
-            {cl.kind === 'seller_assurance' ? <Badge tone="warning" label={t('contract.assurance')} /> : null}
-            {cl.kind === 'disputed_claim' ? <Badge tone="danger" label={t('contract.disputed')} /> : null}
-          </View>
-          <Txt style={{ opacity: cl.included ? 1 : 0.5 }}>{cl.text}</Txt>
-        </Pressable>
-      ))}
+      {c.clauses.map((cl) => {
+        const required = REQUIRED_CLAUSES.has(cl.kind);
+        return (
+          <Pressable
+            key={cl.id}
+            disabled={!editable || required}
+            onPress={() => caseEvent(c.id, { type: 'clause_toggled', clauseId: cl.id })}
+            accessibilityRole={required ? 'text' : 'checkbox'}
+            accessibilityState={required ? undefined : { checked: cl.included, disabled: !editable }}
+            aria-checked={required ? undefined : cl.included}
+            style={[styles.clause, { borderColor: cl.kind === 'disputed_claim' ? p.danger : cl.kind === 'seller_assurance' ? p.warning : p.border, backgroundColor: cl.included ? p.surface : p.surfaceAlt }]}>
+            <View style={styles.head}>
+              {required ? (
+                <Badge tone="neutral" label={t('contract.required')} />
+              ) : (
+                <Txt variant="h2" importantForAccessibility="no">
+                  {cl.included ? '☑' : '☐'}
+                </Txt>
+              )}
+              {cl.kind === 'seller_assurance' ? <Badge tone="warning" label={t('contract.assurance')} /> : null}
+              {cl.kind === 'disputed_claim' ? <Badge tone="danger" label={t('contract.disputed')} /> : null}
+            </View>
+            <Txt style={{ opacity: cl.included ? 1 : 0.5 }}>{cl.text}</Txt>
+          </Pressable>
+        );
+      })}
       <Txt variant="caption">{CONTRACT_DISCLAIMER[prefs.locale]}</Txt>
       <Button kind="secondary" label={t('contract.share')} onPress={share} />
       {isWeb ? <Button kind="ghost" label={t('contract.download')} onPress={download} /> : null}

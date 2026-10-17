@@ -2,7 +2,7 @@
  * Purchase case state machine (§4.2). applyEvent is pure: it returns a new case or an error,
  * never mutates its input. Every change bumps `version`.
  */
-import { generateClauses, inspectionPlan } from './generators';
+import { REQUIRED_CLAUSES, generateClauses, inspectionPlan } from './generators';
 import {
   buildItems,
   hasBlockingFlag,
@@ -31,6 +31,7 @@ import type {
   Money,
   PurchaseCase,
   RegistryCheck,
+  SellerClaim,
 } from './types';
 
 export const OWNERSHIP_NOTIFICATION_DAYS = 7; // ⚠️ verify (Traficom)
@@ -38,6 +39,7 @@ export const OWNERSHIP_NOTIFICATION_DAYS = 7; // ⚠️ verify (Traficom)
 export type CaseEvent =
   | { type: 'claim_edited'; claimId: string; value?: ClaimValue; quote?: string }
   | { type: 'claim_removed'; claimId: string }
+  | { type: 'claim_restored'; claim: SellerClaim; index: number }
   | { type: 'claim_added'; claimType: ClaimType; value: ClaimValue; quote: string }
   | { type: 'claims_confirmed' }
   | { type: 'question_asked'; itemId: string }
@@ -201,6 +203,15 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
       if (!inReview) return fail('claims_locked');
       return bump(c, { ...c, claims: c.claims.filter((cl) => cl.id !== e.claimId) }, ctx);
 
+    case 'claim_restored': {
+      // Undo of claim_removed: the same claim, with its highlight, back in its old place.
+      if (!inReview) return fail('claims_locked');
+      if (c.claims.some((cl) => cl.id === e.claim.id)) return fail('claim_exists');
+      const claims = [...c.claims];
+      claims.splice(Math.max(0, Math.min(e.index, claims.length)), 0, e.claim);
+      return bump(c, { ...c, claims }, ctx);
+    }
+
     case 'claim_added': {
       if (!inReview) return fail('claims_locked');
       const id = nextNumericId(c.claims.map((cl) => cl.id), 'u');
@@ -313,6 +324,7 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
 
     case 'clause_toggled':
       if (!ledgerOpen) return fail('ledger_closed');
+      if (c.clauses.some((cl) => cl.id === e.clauseId && REQUIRED_CLAUSES.has(cl.kind))) return fail('clause_required');
       return bump(c, settle({ ...c, clauses: c.clauses.map((cl) => (cl.id === e.clauseId ? { ...cl, included: !cl.included } : cl)) }, ctx), ctx);
 
     case 'contract_field_set':

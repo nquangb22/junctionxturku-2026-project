@@ -124,6 +124,17 @@ function extractKmClaims(text: string, hits: Hit[]) {
   }
 }
 
+const PRICE_RE = () => new RegExp(String.raw`(?:hinta|price|pris)?\s*:?\s*(${NUM})\s*(€|eur\b|euroa)`, 'i');
+
+/** The asking price as a claim, so it can feed the affordability tool and negotiation hints. */
+function extractPrice(text: string, hits: Hit[]) {
+  const m = PRICE_RE().exec(text);
+  const eurValue = m ? parseGroupedNumber(m[1] ?? '') : undefined;
+  if (!m || eurValue === undefined || eurValue < 300) return;
+  const quote = m[0].trim();
+  pushHit(hits, { type: 'price', value: { kind: 'money', eur: eurValue }, index: m.index + (m[0].length - m[0].trimStart().length), quote, confidence: 'high' });
+}
+
 function extractBeltWithoutKm(text: string, hits: Hit[]) {
   if (hits.some((h) => h.type === 'timing_belt')) return;
   const m = /(jakohihna|hammashihna|kamrem|tidsreim|timing belt|cambelt)\s+(vaihdettu|uusittu|bytt|replaced|changed|done)/i.exec(text);
@@ -186,7 +197,7 @@ function extractCar(text: string): Partial<CarSpec> {
     car.fuel = fuel;
     car.fieldProvenance = { ...car.fieldProvenance, fuel: prov };
   }
-  const price = new RegExp(String.raw`(?:hinta|price|pris)?\s*:?\s*(${NUM})\s*(€|eur\b|euroa)`, 'i').exec(text);
+  const price = PRICE_RE().exec(text);
   if (price) {
     const eurValue = parseGroupedNumber(price[1] ?? '');
     if (eurValue !== undefined && eurValue >= 300) {
@@ -230,6 +241,7 @@ export function extractWithRules(text: string): Extraction {
   extractOwners(text, hits);
   extractKeys(text, hits);
   extractClutch(text, hits);
+  extractPrice(text, hits);
   for (const p of SIMPLE_PATTERNS) {
     const m = p.re.exec(text);
     const value = m ? p.value(m) : undefined;
