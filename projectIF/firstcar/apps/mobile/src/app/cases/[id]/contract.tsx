@@ -3,7 +3,7 @@ import { Redirect, Stack, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Platform, Share, StyleSheet, TextInput, View } from 'react-native';
-import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
@@ -12,7 +12,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { notify } from '@/ui/dialog';
 import { Icon, IconLine } from '@/ui/icon';
-import { PressableScale, tick } from '@/ui/motion';
+import { ICON_IN, PressableScale, tick } from '@/ui/motion';
 import { Badge, Button, Card, Screen, Txt } from '@/ui/primitives';
 
 const EDITABLE_STATUSES = new Set(['checking', 'inspecting', 'contract_prep', 'ready_to_buy']);
@@ -81,7 +81,7 @@ export default function Contract() {
               {required ? (
                 <Badge tone="neutral" label={t('contract.required')} />
               ) : (
-                <Animated.View key={cl.included ? 'on' : 'off'} entering={ZoomIn.springify().damping(14).stiffness(300).reduceMotion(ReduceMotion.System)}>
+                <Animated.View key={cl.included ? 'on' : 'off'} entering={ICON_IN}>
                   <Icon name={cl.included ? 'checkbox' : 'checkboxEmpty'} size={26} color={cl.included ? p.primary : p.textSecondary} />
                 </Animated.View>
               )}

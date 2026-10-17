@@ -10,13 +10,13 @@ import {
   type TextProps,
   type ViewStyle,
 } from 'react-native';
-import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming, ZoomIn, ZoomOut, ReduceMotion } from 'react-native-reanimated';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts, MaxContentWidth, Radius, Spacing, toneColors, type StatusTone } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { Icon, type IconName } from '@/ui/icon';
-import { ENTER, LAYOUT, PressableScale, tick } from '@/ui/motion';
+import { EASE, ENTER, ICON_IN, ICON_OUT, LAYOUT, PressableScale, tick } from '@/ui/motion';
 
 /* ---------- text ---------- */
 
@@ -190,12 +190,12 @@ export function Choice<T extends string | number | boolean>({
   );
 }
 
-/** One chip: colours cross-fade on select and the check pops in, so a toggle reads as a change, not a jump. */
+/** One chip: colours cross-fade on select and the check fades in, so a toggle reads as a change, not a jump. */
 function ChoiceChip({ label, selected, disabled, onPress }: { label: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
   const p = usePalette();
   const on = useSharedValue(selected ? 1 : 0);
   useEffect(() => {
-    on.set(withTiming(selected ? 1 : 0, { duration: 180, reduceMotion: ReduceMotion.System }));
+    on.set(withTiming(selected ? 1 : 0, EASE));
   }, [on, selected]);
   const colors = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(on.get(), [0, 1], [p.surface, p.primarySoft]),
@@ -213,7 +213,7 @@ function ChoiceChip({ label, selected, disabled, onPress }: { label: string; sel
       containerStyle={{ opacity: disabled && !selected ? 0.5 : 1 }}>
       <Animated.View style={[styles.chip, colors]}>
         {selected ? (
-          <Animated.View entering={ZoomIn.springify().damping(14).stiffness(300).reduceMotion(ReduceMotion.System)} exiting={ZoomOut.duration(120).reduceMotion(ReduceMotion.System)}>
+          <Animated.View entering={ICON_IN} exiting={ICON_OUT}>
             <Icon name="check" size={18} color={p.primary} />
           </Animated.View>
         ) : null}

@@ -6,12 +6,12 @@ import { DEMO_ADS, type CarSpec } from '@firstcar/core';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
-import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
-import { PressableScale, SPRING, tick } from '@/ui/motion';
+import { EASE, PressableScale, tick } from '@/ui/motion';
 import { Txt } from '@/ui/primitives';
 
 type Model = 'golf6' | 'golf7' | 'corolla' | 'octavia' | 'passat' | 'focus';
@@ -152,7 +152,7 @@ function Dot({ active }: { active: boolean }) {
   const p = usePalette();
   const w = useSharedValue(active ? 20 : 7);
   useEffect(() => {
-    w.set(withSpring(active ? 20 : 7, { ...SPRING, reduceMotion: ReduceMotion.System }));
+    w.set(withTiming(active ? 20 : 7, EASE));
   }, [active, w]);
   const style = useAnimatedStyle(() => ({ width: w.get() }));
   return <Animated.View style={[styles.dot, style, { backgroundColor: active ? p.primary : p.borderStrong }]} />;
