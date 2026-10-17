@@ -30,11 +30,16 @@ export function Txt({ variant = 'body', color, style, ...rest }: TextProps & { v
 
 /* ---------- layout ---------- */
 
-export function Screen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+export function Screen({ children, footer, top }: { children: ReactNode; footer?: ReactNode; top?: ReactNode }) {
   const p = usePalette();
   const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: p.background }}>
+      {top ? (
+        <View style={[styles.top, { backgroundColor: p.background, borderBottomColor: p.border }]}>
+          <View style={styles.column}>{top}</View>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={[styles.screen, { paddingBottom: Spacing.xxl + (footer ? 0 : insets.bottom) }]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.column}>{children}</View>
       </ScrollView>
@@ -291,6 +296,7 @@ const styles = StyleSheet.create({
   heroIcon: { width: 52, height: 52, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   screen: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.lg },
+  top: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xs, paddingBottom: Spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
   footer: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, borderTopWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
   card: { borderWidth: 1, borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.sm },
   navCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg + 2 },

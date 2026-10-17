@@ -8,6 +8,7 @@ import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { CaseProgress } from '@/ui/case-steps';
 import { confirmAction, notify } from '@/ui/dialog';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
@@ -118,6 +119,7 @@ export default function Inspection() {
 
   return (
     <Screen
+      top={<CaseProgress c={c} current="inspection" t={t} />}
       footer={
         <View style={{ gap: Spacing.sm }}>
           {blocked ? <Txt variant="small">{blocked}</Txt> : null}

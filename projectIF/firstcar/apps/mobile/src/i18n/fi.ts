@@ -2,7 +2,7 @@ import type { MessageKey } from './en';
 
 /** Finnish UI strings. Must have exactly the same keys as en.ts (enforced by the type). */
 export const fi: Record<MessageKey, string> = {
-  appName: 'FirstCar',
+  appName: 'CarCheck',
   'common.continue': 'Jatka',
   'common.cancel': 'Peruuta',
   'common.ok': 'OK',
@@ -419,10 +419,11 @@ export const fi: Record<MessageKey, string> = {
   'photo.exampleTag': 'Esimerkkikuva',
   'photo.galleryLabel': 'Esimerkkikuvia: {model} edestä, takaa ja sisältä. Ei ilmoituksen auto.',
   'home.demoTitle': 'Kokeile esimerkki-ilmoitusta',
-  'home.demoBody': 'Valitse auto ja katso, miten FirstCar tarkistaa ilmoituksen.',
-  'lock.attemptsLeft.one': 'Avaus ei onnistunut. 1 yritys jäljellä, ennen kuin FirstCar lukittuu hetkeksi.',
-  'lock.attemptsLeft.other': 'Avaus ei onnistunut. {n} yritystä jäljellä, ennen kuin FirstCar lukittuu hetkeksi.',
+  'home.demoBody': 'Valitse auto ja katso, miten CarCheck tarkistaa ilmoituksen.',
+  'lock.attemptsLeft.one': 'Avaus ei onnistunut. 1 yritys jäljellä, ennen kuin CarCheck lukittuu hetkeksi.',
+  'lock.attemptsLeft.other': 'Avaus ei onnistunut. {n} yritystä jäljellä, ennen kuin CarCheck lukittuu hetkeksi.',
   'lock.banned': 'Liian monta epäonnistunutta yritystä. Yritä uudelleen {time} kuluttua.',
   'lock.bannedHint': 'Jokainen uusi epäonnistunut yritys pidentää odotusta.',
   'lock.bannedButton': 'Lukittu · {time}',
+  'case.progress': 'Vaihe {n}/{total}: {step}',
 };

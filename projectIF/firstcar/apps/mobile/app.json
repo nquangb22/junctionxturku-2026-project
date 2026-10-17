@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FirstCar",
+    "name": "CarCheck",
     "slug": "firstcar",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,7 @@
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "fi.junction.firstcar",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "FirstCar uses Face ID to unlock your encrypted budget and car checks."
+        "NSFaceIDUsageDescription": "CarCheck uses Face ID to unlock your encrypted budget and car checks."
       }
     },
     "android": {
@@ -41,14 +41,14 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "FirstCar uses Face ID to unlock your encrypted budget and car checks."
+          "faceIDPermission": "CarCheck uses Face ID to unlock your encrypted budget and car checks."
         }
       ],
       [
         "expo-secure-store",
         {
           "configureAndroidBackup": true,
-          "faceIDPermission": "FirstCar uses Face ID to unlock your encrypted budget and car checks."
+          "faceIDPermission": "CarCheck uses Face ID to unlock your encrypted budget and car checks."
         }
       ],
       "expo-notifications",

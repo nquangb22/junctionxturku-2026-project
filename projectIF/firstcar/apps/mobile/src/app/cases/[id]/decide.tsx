@@ -9,6 +9,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { carForCase } from '@/ui/case-helpers';
+import { CaseProgress } from '@/ui/case-steps';
 import { confirmAction } from '@/ui/dialog';
 import { IconLine } from '@/ui/icon';
 import { Badge, Button, Card, NavCard, Screen, Section, Txt } from '@/ui/primitives';
@@ -59,7 +60,7 @@ export default function Decide() {
     });
 
   return (
-    <Screen>
+    <Screen top={<CaseProgress c={c} current="decide" t={t} />}>
       <Stack.Screen options={{ title: t('decide.title') }} />
 
       {budget ? (

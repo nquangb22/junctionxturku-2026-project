@@ -10,6 +10,7 @@ import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { describeValue } from '@/ui/case-helpers';
+import { CaseProgress } from '@/ui/case-steps';
 import { IconLine } from '@/ui/icon';
 import { ClaimPhoto, claimPhoto, PhotoThumb } from '@/ui/photos';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
@@ -86,7 +87,7 @@ export default function ClaimsReview() {
   };
 
   return (
-    <Screen footer={editable ? <Button label={t('claims.confirm')} onPress={confirm} /> : undefined}>
+    <Screen footer={editable ? <Button label={t('claims.confirm')} onPress={confirm} /> : undefined} top={<CaseProgress c={c} current="claims" t={t} />}>
       <Stack.Screen options={{ title: t('claims.title') }} />
       <Txt>{t('claims.body')}</Txt>
       <View style={styles.badges}>
