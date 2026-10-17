@@ -8,6 +8,7 @@ import {
   EVIDENCE_STRENGTH,
   FINDING_TEXTS,
   MANDATORY_CHECKS,
+  MANDATORY_CLAIM_TYPES,
   MANDATORY_TITLES,
   SCENARIO_ITEM_TITLES,
   STRENGTH_RANK,
@@ -34,6 +35,11 @@ const AGE_FOR_SERVICE_HISTORY_ITEM = 8;
 export const claimItemId = (claimId: string) => `claim:${claimId}`;
 export const mandatoryItemId = (checkId: string) => `mandatory:${checkId}`;
 
+/** A mandatory check, or a seller claim standing in for one. Both get the "Mandatory" tag in the app. */
+export function isMandatoryItem(item: VerificationItem): boolean {
+  return item.origin.kind === 'mandatory' || (item.origin.kind === 'claim' && MANDATORY_CLAIM_TYPES.has(item.origin.claimType));
+}
+
 /** Creates ledger items from confirmed claims, mandatory checks and "missing claim" scenarios. */
 export function buildItems(claims: SellerClaim[], car: Partial<CarSpec>, now: Date): VerificationItem[] {
   const claimItems: VerificationItem[] = claims
@@ -54,8 +60,8 @@ export function buildItems(claims: SellerClaim[], car: Partial<CarSpec>, now: Da
 
   const claimedTypes = new Set(claims.map((c) => c.type));
   const mandatoryItems: VerificationItem[] = MANDATORY_CHECKS
-    // The ad's own "inspection valid" claim already covers this check.
-    .filter((m) => !(m.checkId === 'inspection_valid' && claimedTypes.has('inspection_valid')))
+    // A seller claim that covers a check (the ad's "inspection valid") replaces the separate check item.
+    .filter((m) => !(MANDATORY_CLAIM_TYPES.has(m.checkId as SellerClaim['type']) && claimedTypes.has(m.checkId as SellerClaim['type'])))
     .map((m) => ({
       id: mandatoryItemId(m.checkId),
       origin: { kind: 'mandatory', checkId: m.checkId },
@@ -311,31 +317,37 @@ function staticFindings(c: PurchaseCase, item: VerificationItem): Finding[] {
   return [];
 }
 
-function deriveStatus(item: VerificationItem, evidence: Evidence[], findings: Finding[]): VerificationStatus {
+/** The newest evidence for an item. Evidence is appended in the order it is added, so the last match wins. */
+export function latestEvidenceFor(c: PurchaseCase, itemId: string): Evidence | undefined {
+  return c.evidence.filter((e) => e.itemIds.includes(itemId)).at(-1);
+}
+
+/**
+ * Status follows the latest evidence only (product decision 2026-10-17): newer evidence always replaces the
+ * verdict of older evidence, whatever their strengths. A seller statement still cannot verify on its own, and
+ * evidence must still meet the item's minimum strength to verify it.
+ */
+function deriveStatus(item: VerificationItem, latest: Evidence | undefined, hasEvidence: boolean, findings: Finding[]): VerificationStatus {
   if (findings.some((f) => f.kind === 'red_flag' && f.blocking)) return 'not_verified';
-
-  const rank = (e: Evidence) => STRENGTH_RANK[e.strength];
-  const strongest = (list: Evidence[]) => (list.length ? Math.max(...list.map(rank)) : -1);
-  const supporting = evidence.filter((e) => e.outcome === 'supports' && e.strength !== 'seller_statement');
-  const contradicting = evidence.filter((e) => e.outcome === 'contradicts');
-  const s = strongest(supporting);
-  const k = strongest(contradicting);
-
-  // Contradiction beats confirmation unless stronger evidence resolves it (rule 3).
-  if (k >= 0 && s <= k) return 'not_verified';
-  if (s >= STRENGTH_RANK[item.minStrength]) return 'verified';
+  if (latest?.outcome === 'contradicts') return 'not_verified';
+  const verifies = latest?.outcome === 'supports' && latest.strength !== 'seller_statement' && STRENGTH_RANK[latest.strength] >= STRENGTH_RANK[item.minStrength];
+  if (verifies) return 'verified';
   if (item.inspectable && STRENGTH_RANK[item.minStrength] >= STRENGTH_RANK.professional) return 'needs_inspection';
-  if (item.inspectable && evidence.length > 0) return 'needs_inspection';
-  if (evidence.length > 0 || item.questionAsked) return 'awaiting_evidence';
+  if (item.inspectable && hasEvidence) return 'needs_inspection';
+  if (hasEvidence || item.questionAsked) return 'awaiting_evidence';
   return 'unchecked';
 }
 
-/** Recomputes findings and status of every item from the case's evidence. Returns new item objects. */
+/**
+ * Recomputes findings and status of every item from the case's evidence. Returns new item objects.
+ * All evidence stays in the item's history (evidenceIds); only the latest one's findings are current.
+ */
 export function recomputeItems(c: PurchaseCase): VerificationItem[] {
   return c.items.map((item) => {
     const evidence = c.evidence.filter((e) => e.itemIds.includes(item.id));
-    const findings = [...staticFindings(c, item), ...evidence.flatMap((e) => (e.findings ?? []).map((f) => ({ ...f, evidenceId: e.id })))];
-    return { ...item, evidenceIds: evidence.map((e) => e.id), findings, status: deriveStatus(item, evidence, findings) };
+    const latest = evidence.at(-1);
+    const findings = [...staticFindings(c, item), ...(latest?.findings ?? []).map((f) => ({ ...f, evidenceId: latest!.id }))];
+    return { ...item, evidenceIds: evidence.map((e) => e.id), findings, status: deriveStatus(item, latest, evidence.length > 0, findings) };
   });
 }
 

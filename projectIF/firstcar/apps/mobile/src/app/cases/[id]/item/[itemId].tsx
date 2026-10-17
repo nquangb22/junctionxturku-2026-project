@@ -3,6 +3,7 @@ import {
   formatEur,
   formatKm,
   hasBlockingFlag,
+  isMandatoryItem,
   itemTitle,
   mileageGap,
   questionFor,
@@ -80,6 +81,7 @@ export default function ItemDetail() {
       <Stack.Screen options={{ title: itemTitle(item, prefs.locale) }} />
       <View style={styles.badges}>
         <StatusPill status={item.status} t={t} />
+        {isMandatoryItem(item) ? <Badge tone="info" label={t('ledger.mandatory')} /> : null}
         <Badge tone="neutral" label={t(`criticality.${item.criticality}`)} />
         {item.acceptedRisk ? <Badge tone="warning" label={t('ledger.acceptedRisk')} /> : null}
       </View>

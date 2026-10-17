@@ -106,7 +106,8 @@ export default function CaseOverview() {
       </View>
       {confirmed ? (
         <Txt variant="caption">
-          {t('case.itemsExplain', { claims: c.items.filter((i) => i.origin.kind !== 'mandatory').length, checks: c.items.filter((i) => i.origin.kind === 'mandatory').length })}
+          {/* Claims = exactly what the claims tab lists; a claim tagged Mandatory still counts as a claim. */}
+          {t('case.itemsExplain', { claims: c.claims.length, checks: c.items.filter((i) => i.origin.kind === 'mandatory').length })}
         </Txt>
       ) : null}
       {c.listing.injectionSuspected ? <Badge tone="danger" icon="warning" label={t('ledger.redFlag')} /> : null}

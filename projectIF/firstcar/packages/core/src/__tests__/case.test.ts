@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { applyEvent, createCase, evaluateGate, type CaseEvent, type Ctx } from '../case';
 import { DEMO_ADS, MOCK_REGISTRY } from '../fixtures';
-import { beltDueCost, contractText, inspectionPlan, openQuestions, questionFor } from '../generators';
-import { itemTitle, renderFinding } from '../ledger';
+import { beltDueCost, contractText, inspectionPlan, isContradicted, openQuestions, questionFor } from '../generators';
+import { isMandatoryItem, itemTitle, renderFinding } from '../ledger';
 import { eur, formatKm } from '../money';
 import { analyseAd } from '../pipeline';
 import { remindersFor } from '../reminders';
-import type { PurchaseCase, RegistryCheck } from '../types';
+import type { EvidenceKind, PurchaseCase, RegistryCheck } from '../types';
 
 const NOW = new Date('2026-10-17T10:00:00Z');
 const ctx: Ctx = { now: NOW, locale: 'en' };
@@ -234,6 +234,55 @@ describe('gate and red flags', () => {
   });
 });
 
+describe('adding claims after the review', () => {
+  const late: CaseEvent = { type: 'claim_added', claimType: 'clutch', value: { kind: 'text', text: 'Clutch replaced last year' }, quote: 'Said on the phone: clutch replaced last year' };
+
+  it('puts a late claim straight onto the checklist without changing the step', () => {
+    const checking = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const after = apply(checking, late);
+
+    const added = after.claims.at(-1)!;
+    expect(added).toMatchObject({ type: 'clutch', extractor: 'user' });
+    expect(after.items).toHaveLength(checking.items.length + 1);
+    expect(item(after, `claim:${added.id}`)).toMatchObject({ status: 'unchecked', origin: { kind: 'claim', claimType: 'clutch' } });
+    expect(after.status).toBe('checking');
+  });
+
+  it('keeps editing and removing locked once the claims are confirmed', () => {
+    const checking = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = checking.claims[0]!.id;
+    expect(applyEvent(checking, { type: 'claim_edited', claimId: id, quote: 'changed' }, ctx)).toEqual({ ok: false, error: 'claims_locked' });
+    expect(applyEvent(checking, { type: 'claim_removed', claimId: id }, ctx)).toEqual({ ok: false, error: 'claims_locked' });
+  });
+
+  it('a critical claim added at ready_to_buy gets an item and a contract clause, and the gate is re-checked', () => {
+    let c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' }, { type: 'registry_result', registry: registry('XYZ-789') });
+    c = apply(
+      c,
+      { type: 'owner_compared', sellerNameFromId: 'Anna Esimerkki' },
+      { type: 'vin_confirmed', matches: true },
+      { type: 'payment_confirmed', safe: true },
+      { type: 'start_inspection' },
+      { type: 'test_drive_done' },
+      { type: 'inspection_result', outcomes: { [claimItem(c, 'no_accidents').id]: 'ok' } },
+      { type: 'start_contract' },
+      { type: 'mark_ready' },
+    );
+    expect(c.status).toBe('ready_to_buy');
+
+    const after = apply(c, { type: 'claim_added', claimType: 'known_defects', value: { kind: 'text', text: 'AC does not work' }, quote: 'Seller at the viewing: the AC does not work' });
+
+    const itemId = `claim:${after.claims.at(-1)!.id}`;
+    expect(item(after, itemId).status).toBe('unchecked');
+    expect(after.status).toBe(evaluateGate(after).passes ? 'ready_to_buy' : 'contract_prep');
+  });
+
+  it('refuses new claims once the car is bought', () => {
+    const bought: PurchaseCase = { ...apply(newCase('corolla-clean'), { type: 'claims_confirmed' }), status: 'bought' };
+    expect(applyEvent(bought, late, ctx)).toEqual({ ok: false, error: 'claims_locked' });
+  });
+});
+
 describe('transition guards', () => {
   const draft = newCase('corolla-clean');
 
@@ -287,5 +336,72 @@ describe('scenario items for missing claims', () => {
     expect(itemTitle(belt, 'en')).toBe('Timing belt history (not in the ad)');
     expect(c.items.some((i) => i.id === 'scenario:service_history_missing')).toBe(true);
     expect(questionFor(c, belt, 'fi')?.buyerText).toMatch(/jakohihna/i);
+  });
+});
+
+describe('mandatory tag', () => {
+  it('tags the mandatory checks and a seller claim that stands in for one, nothing else', () => {
+    // golf-odometer's ad says "Katsastettu 03/2026", so its inspection claim replaces the separate check.
+    const c = apply(newCase('golf-odometer'), { type: 'claims_confirmed' });
+    const tagged = c.items.filter(isMandatoryItem);
+
+    expect(tagged.filter((i) => i.origin.kind === 'mandatory')).toHaveLength(5);
+    expect(tagged.filter((i) => i.origin.kind === 'claim').map((i) => i.origin.kind === 'claim' && i.origin.claimType)).toEqual(['inspection_valid']);
+    expect(isMandatoryItem(claimItem(c, 'odometer'))).toBe(false);
+  });
+
+  it('keeps all six mandatory checks when the ad does not claim a valid inspection', () => {
+    const c = apply(newCase('passat-scam'), { type: 'claims_confirmed' });
+    expect(c.claims.some((cl) => cl.type === 'inspection_valid')).toBe(false);
+    expect(c.items.filter((i) => i.origin.kind === 'mandatory')).toHaveLength(6);
+    expect(c.items.filter(isMandatoryItem)).toHaveLength(6);
+  });
+});
+
+describe('status follows the latest evidence', () => {
+  const ev = (kind: EvidenceKind, itemId: string, outcome: 'supports' | 'contradicts' | 'neutral'): CaseEvent =>
+    ({ type: 'evidence_added', kind, itemIds: [itemId], outcome });
+
+  it('newer weaker evidence overrules older stronger evidence', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = claimItem(c, 'service_history').id;
+
+    const verified = apply(c, ev('service_record', id, 'supports'));
+    expect(item(verified, id).status).toBe('verified');
+
+    const contradicted = apply(verified, ev('photo', id, 'contradicts'));
+    expect(item(contradicted, id).status).toBe('not_verified');
+    expect(item(contradicted, id).evidenceIds).toHaveLength(2); // history is kept
+  });
+
+  it('a later seller message clears a problem but cannot verify', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = claimItem(c, 'no_accidents').id;
+
+    const found = apply(c, ev('inspection_report', id, 'contradicts'));
+    expect(item(found, id).status).toBe('not_verified');
+    expect(isContradicted(found, item(found, id))).toBe(true);
+
+    const sellerSays = apply(found, ev('seller_message', id, 'supports'));
+    expect(item(sellerSays, id).status).toBe('needs_inspection');
+    expect(isContradicted(sellerSays, item(sellerSays, id))).toBe(false);
+  });
+
+  it('evidence below the minimum strength does not verify, even when latest', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' });
+    const id = claimItem(c, 'service_history').id; // needs a document
+    expect(item(apply(c, ev('photo', id, 'supports')), id).status).toBe('awaiting_evidence');
+  });
+
+  it('a blocking red flag from older evidence is cleared by newer evidence', () => {
+    const c = apply(newCase('corolla-clean'), { type: 'claims_confirmed' }, { type: 'registry_result', registry: registry('XYZ-789') });
+    const ownerId = 'mandatory:owner_matches_seller';
+
+    const wrong = apply(c, { type: 'owner_compared', sellerNameFromId: 'Someone Else' });
+    expect(item(wrong, ownerId).status).toBe('not_verified');
+
+    const right = apply(wrong, { type: 'owner_compared', sellerNameFromId: 'Anna Esimerkki' });
+    expect(item(right, ownerId).status).toBe('verified');
+    expect(item(right, ownerId).findings.some((f) => f.kind === 'red_flag')).toBe(false);
   });
 });

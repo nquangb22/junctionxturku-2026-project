@@ -119,6 +119,7 @@ export const fi: Record<MessageKey, string> = {
   'claims.remove': 'Poista',
   'claims.add': 'Lisää toinen väite',
   'claims.addNote': 'Mitä myyjä sanoi?',
+  'claims.addLaterHint': 'Kertoiko myyjä jotain uutta? Lisää se tähän. Se menee suoraan tarkistuslistallesi.',
   'claims.addButton': 'Lisää',
   'claims.confirm': 'Näyttää oikealta, aloita tarkistus',
   'claims.none': 'Väitteitä ei löytynyt. Lisää ne, jotka näet.',
@@ -164,6 +165,7 @@ export const fi: Record<MessageKey, string> = {
   'ledger.title': 'Kysymykset ja näyttö',
   'ledger.acceptedRisk': 'Hyväksytty riski',
   'ledger.due': 'Edessä',
+  'ledger.mandatory': 'Pakollinen',
   'ledger.redFlag': 'Varoitus',
 
   'item.adSays': 'Ilmoituksessa lukee',
