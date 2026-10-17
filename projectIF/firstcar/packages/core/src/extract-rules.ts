@@ -124,7 +124,9 @@ function extractKmClaims(text: string, hits: Hit[]) {
   }
 }
 
-const PRICE_RE = () => new RegExp(String.raw`(?:hinta|price|pris)?\s*:?\s*(${NUM})\s*(€|eur\b|euroa)`, 'i');
+// The keyword group owns its whitespace. An optional keyword followed by `\s*:?\s*` backtracks cubically
+// on long blank runs, which froze the app on ads padded with whitespace.
+const PRICE_RE = () => new RegExp(String.raw`(?:(?:hinta|price|pris)\s*:?\s*)?(${NUM})\s*(€|eur\b|euroa)`, 'i');
 
 /** The asking price as a claim, so it can feed the affordability tool and negotiation hints. */
 function extractPrice(text: string, hits: Hit[]) {

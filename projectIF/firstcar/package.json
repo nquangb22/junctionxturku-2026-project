@@ -8,7 +8,10 @@
   "scripts": {
     "test": "npm run test --workspace @firstcar/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "start": "npm run start --workspace mobile"
+    "start": "npm run start --workspace mobile",
+    "sync:shared": "node scripts/sync-shared.mts",
+    "functions:check": "npm run sync:shared && cd supabase/functions && deno task check",
+    "functions:test": "npm run sync:shared && cd supabase/functions && deno task test && deno task coverage"
   },
   "overrides": {
     "react": "19.2.3",

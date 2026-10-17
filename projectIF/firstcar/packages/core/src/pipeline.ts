@@ -65,7 +65,7 @@ function clampValue(v: unknown): ClaimValue | undefined {
 }
 
 /** Car fields from untrusted LLM output; invalid fields are dropped. */
-function sanitiseLlmCar(raw: unknown, now: Date): LlmExtractionV1['car'] {
+export function sanitiseLlmCar(raw: unknown, now: Date): LlmExtractionV1['car'] {
   if (typeof raw !== 'object' || raw === null) return {};
   const o = raw as Record<string, unknown>;
   const name = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_NAME) : undefined);
@@ -77,6 +77,21 @@ function sanitiseLlmCar(raw: unknown, now: Date): LlmExtractionV1['car'] {
     modelYear: isNum(year) && Number.isInteger(year) && year >= MIN_MODEL_YEAR && year <= now.getUTCFullYear() + 1 ? year : undefined,
     priceEur: isNum(price) && price > 0 && price <= MAX_PRICE_EUR ? price : undefined,
   };
+}
+
+const QUOTE_NUMBER = /\d{1,3}(?:[ .  ]\d{3})+|\d+/g;
+
+/**
+ * A grounded quote can still carry a made-up number ("Ajettu 250 000 km" with km: 50000).
+ * Kilometres and euros must appear in their own quote, as written or as tkm (×1000) / Swedish mil (×10).
+ */
+export function numberMatchesQuote(value: ClaimValue, quote: string): boolean {
+  const km = value.kind === 'km' ? value.km : value.kind === 'event' ? value.atKm : undefined;
+  const target = km ?? (value.kind === 'money' ? value.eur : undefined);
+  if (target === undefined) return true;
+  const numbers = (quote.match(QUOTE_NUMBER) ?? []).map((n) => Number(n.replace(/\D/g, '')));
+  const scales = km !== undefined ? [1, 1000, 10] : [1];
+  return numbers.some((n) => scales.some((s) => n * s === target));
 }
 
 /**
@@ -93,7 +108,7 @@ export function validateLlmExtraction(raw: unknown, redactedText: string): { cla
     if (!c || typeof c.quote !== 'string' || !CLAIM_TYPES.has(c.type) || typeof c.value !== 'object') continue;
     if (c.quote.length < 3 || c.quote.length > 200 || !isGrounded(redactedText, c.quote)) continue;
     const value = clampValue(c.value);
-    if (!value) continue;
+    if (!value || !numberMatchesQuote(value, c.quote)) continue;
     const span = findSpan(redactedText, c.quote);
     claims.push({
       id: '',

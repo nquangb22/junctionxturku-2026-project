@@ -295,6 +295,7 @@ export const fi: Record<MessageKey, string> = {
   'settings.deleteConfirm': 'Tämä poistaa kaikki tapaukset, budjetin ja salausavaimen. Toimintoa ei voi perua.',
   'settings.privacyTitle': 'Yksityisyys',
   'settings.privacyBody': 'Kaikki tallennetaan salattuna tähän puhelimeen. Ilmoituksen teksti siistitään henkilötiedoista ennen kuin se voisi päätyä palvelimelle. Ifille ei lähde mitään, ellet napauta “Jaa nämä ja pyydä tarjous”.',
+  'settings.privacyBodyWeb': 'Kaikki pysyy tässä selaimessa tällä laitteella. Ilmoituksen teksti siistitään henkilötiedoista ennen kuin se voisi päätyä palvelimelle. Ifille ei lähde mitään, ellet napauta “Jaa nämä ja pyydä tarjous”.',
   'settings.webNote': 'Verkkodemo: tiedot tallennetaan salaamattomina tähän selaimeen. Älä syötä oikeita henkilötietoja.',
   'error.title': 'Jokin meni vikaan',
   'error.body': 'Sovellus kohtasi odottamattoman virheen. Tallennettuja tietojasi ei ole muutettu.',

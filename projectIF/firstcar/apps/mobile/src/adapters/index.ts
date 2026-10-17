@@ -20,6 +20,8 @@ import {
 } from '@firstcar/core';
 import { CryptoDigestAlgorithm, digestStringAsync } from 'expo-crypto';
 
+import { callFunction, isBackendConfigured } from './backend';
+
 const MOCK_LATENCY_MS = 600;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -31,16 +33,42 @@ export interface ExtractionOptions {
   now: Date;
 }
 
+interface ExtractClaimsResponse {
+  llm: unknown;
+  source: 'llm' | 'cache' | 'unavailable';
+  injectionSuspected: boolean;
+}
+
+/**
+ * Live LLM claims from the `extract-claims` function. Undefined means rules-only. The backend is optional, so
+ * every failure (offline, limit hit, gateway error, storage error) falls back instead of failing the intake.
+ */
+async function liveExtraction(redacted: string): Promise<{ llm: unknown; llmSource: 'llm+rules' | 'cache' } | undefined> {
+  if (!isBackendConfigured()) return undefined;
+  try {
+    const res = await callFunction<ExtractClaimsResponse>('extract-claims', { redactedText: redacted, schemaVersion: 1, country: 'FI' });
+    if (res.source === 'unavailable' || res.llm === null) return undefined;
+    return { llm: res.llm, llmSource: res.source === 'cache' ? 'cache' : 'llm+rules' };
+  } catch (err) {
+    console.warn('extract-claims unavailable, using on-device rules', err instanceof Error ? err.message : String(err));
+    return undefined;
+  }
+}
+
 /**
  * Rules run on the device. In mock mode, ads that match a demo fixture also get the fixture's
- * "LLM" output, which goes through the same validation (schema, clamps, quote grounding) as live output.
- * Post-hack: call the Supabase `extract-claims` function with the redacted text + hash here.
+ * "LLM" output. With mock mode off and a backend configured, only the redacted text goes to `extract-claims`.
+ * Either way the LLM output goes through the same validation (schema, clamps, quote grounding).
  */
 export async function extractClaims(raw: string, opts: ExtractionOptions): Promise<AnalysedAd> {
   const { redacted } = prepareAd(raw);
   const key = normaliseForMatch(redacted);
   const textHash = await digestStringAsync(CryptoDigestAlgorithm.SHA256, key);
-  const fixture = opts.useMockLlm ? DEMO_ADS.find((a) => normaliseForMatch(prepareAd(a.text).redacted) === key) : undefined;
+  if (!opts.useMockLlm) {
+    const live = await liveExtraction(redacted);
+    return analyseAd(raw, { now: opts.now, textHash, inputKind: opts.inputKind, llm: live?.llm, llmSource: live?.llmSource });
+  }
+  const fixture = DEMO_ADS.find((a) => normaliseForMatch(prepareAd(a.text).redacted) === key);
   if (fixture) await wait(MOCK_LATENCY_MS);
   return analyseAd(raw, { now: opts.now, textHash, inputKind: opts.inputKind, llm: fixture?.llm, llmSource: fixture ? 'mock' : undefined });
 }

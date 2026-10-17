@@ -1,0 +1,13 @@
+{
+  "nodeModulesDir": "none",
+  "tasks": {
+    "check": "deno check */index.ts",
+    "test": "deno test --allow-env --allow-read --coverage=coverage tests/",
+    "coverage": "deno coverage coverage --exclude=_shared/core/ --exclude=tests/"
+  },
+  "lint": {
+    "exclude": ["_shared/core/", "coverage/"],
+    "rules": { "exclude": ["no-import-prefix"] }
+  },
+  "fmt": { "exclude": ["_shared/core/"] }
+}

@@ -65,7 +65,7 @@ export default function Settings() {
 
       <Section title={t('settings.privacyTitle')}>
         <Card>
-          <Txt>{t('settings.privacyBody')}</Txt>
+          <Txt>{t(Platform.OS === 'web' ? 'settings.privacyBodyWeb' : 'settings.privacyBody')}</Txt>
         </Card>
         {Platform.OS === 'web' ? <Txt variant="small">{t('settings.webNote')}</Txt> : null}
         {saveError ? <Txt variant="small">{t('common.error', { error: saveError })}</Txt> : null}

@@ -1,0 +1,31 @@
+# Supabase project config for FirstCar (docs/architecture.md §0.1). Create the hosted project in the
+# EU (Stockholm, eu-north-1). This file drives `supabase start` locally and `supabase functions deploy`.
+project_id = "firstcar"
+
+[db]
+major_version = 17
+
+[auth]
+# The app signs in anonymously: no email, phone or password is ever collected.
+enable_anonymous_sign_ins = true
+enable_signup = true
+
+[auth.email]
+enable_signup = false
+
+[auth.sms]
+enable_signup = false
+
+# App-facing functions: the gateway checks the JWT, and the handler verifies it again with Supabase Auth.
+[functions.extract-claims]
+verify_jwt = true
+
+[functions.registry-check]
+verify_jwt = true
+
+[functions.if-handoff]
+verify_jwt = true
+
+# Called by If with a partner secret, not a user JWT.
+[functions.if-handoff-redeem]
+verify_jwt = false

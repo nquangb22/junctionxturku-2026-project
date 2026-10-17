@@ -293,6 +293,7 @@ export const en = {
   'settings.deleteConfirm': 'This deletes all cases, your budget and the encryption key. It cannot be undone.',
   'settings.privacyTitle': 'Privacy',
   'settings.privacyBody': 'Everything is stored encrypted on this phone. Ad text is redacted before it could reach any server. Nothing goes to If unless you tap “Share and get a quote”.',
+  'settings.privacyBodyWeb': 'Everything stays in this browser on this device. Ad text is redacted before it could reach any server. Nothing goes to If unless you tap “Share and get a quote”.',
   'settings.webNote': 'Web demo: data is stored unencrypted in this browser. Do not enter real personal data.',
   'error.title': 'Something went wrong',
   'error.body': 'The app hit an unexpected error. Your saved data has not been changed.',
