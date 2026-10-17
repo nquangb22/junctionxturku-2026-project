@@ -1,5 +1,5 @@
 import { eur, type AgeBand, type BuyerProfile, type CarSpec, type CoverIntent, type Density, type Range, type Money } from '@firstcar/core';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useSession } from '@/state/session';
@@ -36,6 +36,8 @@ const bandKey = (table: Record<string, Range<Money> | undefined>, value?: Range<
 export default function ReadyInputs() {
   const { t, prefs } = useSession();
   const { data, patch } = useStore();
+  // Where the flow was started from, so the result can send the user back there.
+  const { from, caseId } = useLocalSearchParams<{ from?: string; caseId?: string }>();
   const prev = data.profile;
 
   const [car, setCar] = useState<string | undefined>(Object.entries(CAR_PRESETS).find(([, c]) => c.model === data.readinessCar?.model)?.[0]);
@@ -63,7 +65,7 @@ export default function ReadyInputs() {
       deductible: eur(deductible),
     };
     patch({ profile, readinessCar: CAR_PRESETS[car] });
-    router.replace('/ready/result');
+    router.replace({ pathname: '/ready/result', params: from && caseId ? { from, caseId } : {} });
   };
 
   const bands = (table: Record<string, unknown>) => Object.keys(table).map((k) => ({ value: k, label: k === 'skip' ? t('common.skip') : `${k} €` }));

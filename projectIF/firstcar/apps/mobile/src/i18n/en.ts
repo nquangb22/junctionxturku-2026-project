@@ -256,12 +256,10 @@ export const en = {
 
   'insure.title': 'Insurance & registration',
   'insure.mandatory': 'You now need motor liability insurance before you drive it home. Register the ownership change within 7 days ⚠️.',
-  'insure.neutral': 'Any insurer can provide motor liability insurance. Below is If’s offer, prefilled.',
+  'insure.neutral': 'Any insurer can provide motor liability insurance. This demo asks If for a quote.',
   'insure.payloadTitle': 'Exactly what will be shared with If',
   'insure.notShared': 'Never shared: income, savings, your checks, evidence, seller details.',
   'insure.consent': 'Share this and get a quote',
-  'insure.needProfile': 'Add your budget details first. They are needed for the insurance request, and we will not guess them.',
-  'insure.toProfile': 'Set up my budget',
   'insure.quote': 'Quote: {amount} / month (demo)',
   'insure.bind': 'Accept and insure',
   'insure.register': 'File the ownership change (demo)',
@@ -349,6 +347,16 @@ export const en = {
   'home.hidePast': 'Hide past cars',
   'contract.copied': 'Copied to clipboard',
   'contract.download': 'Download as .txt',
+  'insure.quickTitle': 'Answer these for the quote',
+  'insure.orFull': 'Or set up the full budget',
+  'insure.insured': '✓ Insured with If (demo): {amount} / month, {cover}, {deductible} deductible, starts {date}',
+  'insure.howToTitle': 'How to register the ownership change',
+  'insure.howTo': 'Use Traficom’s e-service (sign in with your online banking ID) or visit an inspection station. You need the signed contract and your ID. A small fee applies: check the current price on Traficom’s site. Motor liability insurance must be in force first.',
+  'result.backToInsurance': 'Back to insurance',
+  'own.dueNow': 'Due now',
+  'own.accepted': 'What you accepted',
+  'own.insurance': 'Insurance',
+  'own.viewCheck': 'View the full check',
 } as const;
 
 export type MessageKey = keyof typeof en;

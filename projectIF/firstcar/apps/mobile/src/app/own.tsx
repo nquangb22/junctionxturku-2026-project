@@ -1,5 +1,5 @@
-import { beltDueCost, computeBudget, formatEur, remindersFor, type PurchaseCase } from '@firstcar/core';
-import { Stack } from 'expo-router';
+import { beltDueCost, computeBudget, formatEur, isStale, itemTitle, remindersFor, renderFinding, type PurchaseCase, type Reminder } from '@firstcar/core';
+import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 
 import { usePalette } from '@/hooks/use-palette';
@@ -7,7 +7,8 @@ import { scheduleReminders } from '@/reminders/schedule';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { carForCase, caseTitle, formatDate } from '@/ui/case-helpers';
-import { Button, Card, Row, Screen, Section, Txt } from '@/ui/primitives';
+import { InsuredCard } from '@/ui/insured-card';
+import { Button, Card, NavCard, Row, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Own() {
   const { t, prefs } = useSession();
@@ -53,12 +54,21 @@ export default function Own() {
   );
 }
 
+/** Only the insurance renewal has a real day; the others are seasonal or yearly, so show the month. */
+function reminderDate(r: Reminder, locale: 'en' | 'fi'): string {
+  if (r.kind === 'insurance_renewal') return formatDate(r.dueAt, locale);
+  return new Date(r.dueAt).toLocaleDateString(locale === 'fi' ? 'fi-FI' : 'en-GB', { month: 'long', year: 'numeric' });
+}
+
 function OwnedCar({ c }: { c: PurchaseCase }) {
   const { t, prefs } = useSession();
   const { data } = useStore();
   const now = new Date();
   const car = carForCase(c);
   const budget = data.profile && car ? computeBudget({ profile: data.profile, car, extraOneOffEur: beltDueCost(c), now }) : undefined;
+  const due = c.items.filter(isStale);
+  const accepted = c.items.filter((i) => i.acceptedRisk);
+  const openItem = (itemId: string) => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId } });
   return (
     <Section title={caseTitle(c)}>
       {budget ? (
@@ -66,12 +76,41 @@ function OwnedCar({ c }: { c: PurchaseCase }) {
           <Txt variant="bodyStrong">{t('own.budget', { amount: formatEur(budget.monthlyTotal) })}</Txt>
         </Card>
       ) : null}
+      {due.length ? (
+        <>
+          <Txt variant="bodyStrong">{t('own.dueNow')}</Txt>
+          {due.map((i) => (
+            <NavCard
+              key={i.id}
+              title={itemTitle(i, prefs.locale)}
+              subtitle={i.findings.filter((f) => f.kind === 'stale').map((f) => renderFinding(f, prefs.locale)).join(' ')}
+              tone="warning"
+              onPress={() => openItem(i.id)}
+            />
+          ))}
+        </>
+      ) : null}
+      {accepted.length ? (
+        <>
+          <Txt variant="bodyStrong">{t('own.accepted')}</Txt>
+          {accepted.map((i) => (
+            <NavCard key={i.id} title={itemTitle(i, prefs.locale)} onPress={() => openItem(i.id)} />
+          ))}
+        </>
+      ) : null}
+      {c.handoff ? (
+        <>
+          <Txt variant="bodyStrong">{t('own.insurance')}</Txt>
+          <InsuredCard c={c} />
+        </>
+      ) : null}
       <Card>
         <Txt variant="bodyStrong">{t('own.reminders')}</Txt>
         {remindersFor(c, now, prefs.locale).map((r) => (
-          <Row key={r.id} label={r.title} value={formatDate(r.dueAt, prefs.locale)} />
+          <Row key={r.id} label={r.title} value={reminderDate(r, prefs.locale)} />
         ))}
       </Card>
+      <NavCard title={t('own.viewCheck')} onPress={() => router.push({ pathname: '/cases/[id]', params: { id: c.id } })} />
     </Section>
   );
 }

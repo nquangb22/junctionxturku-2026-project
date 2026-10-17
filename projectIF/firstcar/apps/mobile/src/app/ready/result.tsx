@@ -1,5 +1,5 @@
 import { computeBudget, deductibleTradeoffs, formatEur, selectScenarios, toEuros, type BudgetLine, type RiskScenario } from '@firstcar/core';
-import { Redirect, Stack, router } from 'expo-router';
+import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
 
 import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
@@ -10,6 +10,7 @@ import { VerdictCard } from '@/ui/verdict-card';
 export default function ReadyResult() {
   const { t, prefs } = useSession();
   const { data } = useStore();
+  const { from, caseId } = useLocalSearchParams<{ from?: string; caseId?: string }>();
   if (!data.profile || !data.readinessCar) return <Redirect href="/ready" />;
 
   const now = new Date();
@@ -69,8 +70,12 @@ export default function ReadyResult() {
       </Section>
 
       <Section title={t('result.nextTitle')}>
-        <Button label={t('result.next')} onPress={() => router.push('/cases/new')} />
-        <Button kind="secondary" label={t('result.edit')} onPress={() => router.replace('/ready')} />
+        {from === 'insure' && typeof caseId === 'string' ? (
+          <Button label={t('result.backToInsurance')} onPress={() => router.dismissTo({ pathname: '/cases/[id]/insure', params: { id: caseId } })} />
+        ) : (
+          <Button label={t('result.next')} onPress={() => router.push('/cases/new')} />
+        )}
+        <Button kind="secondary" label={t('result.edit')} onPress={() => router.replace({ pathname: '/ready', params: from && caseId ? { from, caseId } : {} })} />
       </Section>
     </Screen>
   );
