@@ -68,12 +68,12 @@ const SOURCES: Record<Model, Record<Angle, ImageSourcePropType>> = {
 };
 
 const AUTHORS: Record<Model, Record<Angle, [author: string, license: string]>> = {
-  golf6: { front: ['Thomas doerfer', 'CC BY 3.0'], rear: ['Thomas doerfer', 'CC BY 3.0'], interior: ['TTTNIS', 'Public domain'] },
+  golf6: { front: ['Thomas doerfer', 'CC BY 3.0'], rear: ['Thomas doerfer', 'CC BY 3.0'], interior: ['Thomas doerfer', 'CC BY 3.0'] },
   golf7: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Antoineets', 'CC BY-SA 4.0'] },
-  corolla: { front: ['KGC626', 'CC BY-SA 4.0'], rear: ['Alex Neman', 'CC BY-SA 4.0'], interior: ['TTTNIS', 'CC0'] },
+  corolla: { front: ['Kskhh', 'CC BY-SA 4.0'], rear: ['Alex Neman', 'CC BY-SA 4.0'], interior: ['TTTNIS', 'CC0'] },
   octavia: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Kickaffe (Mario von Berg)', 'CC BY-SA 3.0'] },
   passat: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Acgskup', 'CC BY 4.0'] },
-  focus: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Kickaffe (Mario von Berg)', 'CC BY-SA 3.0'] },
+  focus: { front: ['Vauxford', 'CC BY-SA 4.0'], rear: ['Vauxford', 'CC BY-SA 4.0'], interior: ['Nordenfan', 'CC BY-SA 4.0'] },
 };
 
 const REPAIR = { source: require('@/../assets/images/photos/claim-repair.jpg'), author: 'Shixart1985', license: 'CC BY 2.0', what: 'Car repair' };
@@ -122,6 +122,22 @@ export function carFront(car: CarLike): ImageSourcePropType | undefined {
   return m ? SOURCES[m].front : undefined;
 }
 
+/**
+ * A photo that is never cut off: the whole photo sits in the frame, and any space around it shows a blurred,
+ * zoomed copy of the same photo instead of bars. Portrait shots (a tyre, a timing belt) and very wide car shots
+ * keep their subject whole in a fixed-shape frame.
+ */
+function FramedImage({ source, aspectRatio, width }: { source: ImageSourcePropType; aspectRatio: number; width?: number }) {
+  const p = usePalette();
+  return (
+    <View style={[styles.frame, { aspectRatio, width, backgroundColor: p.surfaceAlt }]}>
+      <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={28} accessible={false} />
+      <View style={[StyleSheet.absoluteFill, styles.dim]} />
+      <Image source={source} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} accessible={false} />
+    </View>
+  );
+}
+
 /** The photo for a claim or check: its topic, or for mileage the dashboard of the ad's model. */
 export function claimPhoto(key: ClaimType | MandatoryCheckId, car: CarLike): ImageSourcePropType | undefined {
   if (key === 'odometer') {
@@ -139,10 +155,9 @@ export function itemPhoto(origin: ItemOrigin, car: CarLike): ImageSourcePropType
 
 /** A wide photo for one claim, fading in, tagged as an example: a rusty arch here is not the seller's car. */
 export function ClaimPhoto({ source, t, aspectRatio = 16 / 9 }: { source: ImageSourcePropType; t: Translate; aspectRatio?: number }) {
-  const p = usePalette();
   return (
-    <Animated.View entering={ENTER}>
-      <Image source={source} style={[styles.claimImage, { aspectRatio, backgroundColor: p.surfaceAlt }]} contentFit="cover" transition={150} accessible={false} />
+    <Animated.View entering={ENTER} style={styles.rounded}>
+      <FramedImage source={source} aspectRatio={aspectRatio} />
       <ExampleTag t={t} />
     </Animated.View>
   );
@@ -161,7 +176,6 @@ function ExampleTag({ t }: { t: Translate }) {
 
 /** Swipeable front / rear / interior photos of the ad's model, with dots underneath. */
 export function CarGallery({ car, t }: { car: CarLike; t: Translate }) {
-  const p = usePalette();
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
   const m = modelOf(car);
@@ -176,7 +190,7 @@ export function CarGallery({ car, t }: { car: CarLike; t: Translate }) {
           onMomentumScrollEnd={(e) => width && setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
           style={styles.galleryScroll}>
           {ANGLES.map((a) => (
-            <Image key={a} source={SOURCES[m][a]} style={[styles.slide, { width: width || 1, backgroundColor: p.surfaceAlt }]} contentFit="cover" transition={150} />
+            <FramedImage key={a} source={SOURCES[m][a]} aspectRatio={16 / 10} width={width || 1} />
           ))}
         </ScrollView>
         <ExampleTag t={t} />
@@ -233,7 +247,7 @@ export function DemoAdCards({ t, selected, onPick, layout }: { t: Translate; sel
         }}
         containerStyle={layout === 'row' ? styles.cardRow : styles.cardGrid}
         style={[styles.card, { backgroundColor: on ? p.primarySoft : p.surface, borderColor: on ? p.primary : p.border }]}>
-        {front ? <Image source={front} style={[styles.cardImage, { backgroundColor: p.surfaceAlt }]} contentFit="cover" /> : null}
+        {front ? <FramedImage source={front} aspectRatio={16 / 10} /> : null}
         <View style={styles.cardText}>
           <Txt variant="bodyStrong" numberOfLines={1} color={on ? p.primary : undefined}>
             {name}
@@ -257,20 +271,20 @@ export function DemoAdCards({ t, selected, onPick, layout }: { t: Translate; sel
 
 const styles = StyleSheet.create({
   gallery: { gap: Spacing.sm },
-  galleryScroll: { borderRadius: Radius.lg },
-  slide: { aspectRatio: 16 / 10 },
+  galleryScroll: { borderRadius: Radius.lg, overflow: 'hidden' },
   tag: { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#24150CB3', borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.xs },
   dot: { height: 7, borderRadius: 4 },
   hero: { width: '100%', aspectRatio: 3 / 2, borderRadius: Radius.lg },
   thumb: { width: 72, height: 54, borderRadius: Radius.md },
   thumbSmall: { width: 48, height: 48, borderRadius: Radius.md },
-  claimImage: { width: '100%', borderRadius: Radius.lg },
+  frame: { width: '100%', overflow: 'hidden' },
+  rounded: { borderRadius: Radius.lg, overflow: 'hidden' },
+  dim: { backgroundColor: '#24150C26' },
   row: { gap: Spacing.md, paddingRight: Spacing.lg },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   card: { borderWidth: 1.5, borderRadius: Radius.lg, overflow: 'hidden' },
   cardRow: { width: 200 },
   cardGrid: { flexBasis: '45%', flexGrow: 1 },
-  cardImage: { width: '100%', aspectRatio: 16 / 10 },
   cardText: { padding: Spacing.md, gap: 2 },
 });
