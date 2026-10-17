@@ -420,4 +420,9 @@ export const fi: Record<MessageKey, string> = {
   'photo.galleryLabel': 'Esimerkkikuvia: {model} edestä, takaa ja sisältä. Ei ilmoituksen auto.',
   'home.demoTitle': 'Kokeile esimerkki-ilmoitusta',
   'home.demoBody': 'Valitse auto ja katso, miten FirstCar tarkistaa ilmoituksen.',
+  'lock.attemptsLeft.one': 'Avaus ei onnistunut. 1 yritys jäljellä, ennen kuin FirstCar lukittuu hetkeksi.',
+  'lock.attemptsLeft.other': 'Avaus ei onnistunut. {n} yritystä jäljellä, ennen kuin FirstCar lukittuu hetkeksi.',
+  'lock.banned': 'Liian monta epäonnistunutta yritystä. Yritä uudelleen {time} kuluttua.',
+  'lock.bannedHint': 'Jokainen uusi epäonnistunut yritys pidentää odotusta.',
+  'lock.bannedButton': 'Lukittu · {time}',
 };

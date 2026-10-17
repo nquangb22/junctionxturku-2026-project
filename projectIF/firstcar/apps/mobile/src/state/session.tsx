@@ -4,6 +4,7 @@
  * A privacy cover hides the content the moment the app goes inactive (OS app switcher).
  */
 import * as SplashScreen from 'expo-splash-screen';
+import { attemptsLeft, lockoutRemainingMs, NO_LOCKOUT, recordUnlockFailure, recordUnlockSuccess, type LockoutState } from '@firstcar/core';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, BackHandler, StyleSheet, View } from 'react-native';
 
@@ -12,9 +13,12 @@ import { parseAppData } from '@/state/app-data';
 import { notify } from '@/ui/dialog';
 import { LockScreen, PrivacyCover, type VaultFailure } from '@/ui/lock-screen';
 import { authenticate, lockAvailability, RELOCK_AFTER_MS, type LockAvailability } from '@/vault/lock';
-import { DEFAULT_PREFS, loadPrefs, loadVault, savePrefs, wipeVault, type VaultPrefs } from '@/vault/vault';
+import { DEFAULT_PREFS, loadLockout, loadPrefs, loadVault, saveLockout, savePrefs, wipeVault, type VaultPrefs } from '@/vault/vault';
 
 type Phase = 'booting' | 'locked' | 'ready' | VaultFailure;
+
+/** Prompt results that are not a wrong face, finger or passcode: the system or device got in the way. */
+const NOT_A_FAILED_TRY = new Set(['app_cancel', 'system_cancel', 'not_available', 'not_enrolled', 'passcode_not_set']);
 
 interface Session {
   prefs: VaultPrefs;
@@ -39,6 +43,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [availability, setAvailability] = useState<LockAvailability>('none');
   const [initialJson, setInitialJson] = useState<string | undefined>();
   const [lockError, setLockError] = useState<string | undefined>();
+  const [lockout, setLockout] = useState<LockoutState>(NO_LOCKOUT);
   const [relocked, setRelocked] = useState(false);
   const [covered, setCovered] = useState(false);
   const [bootAttempt, setBootAttempt] = useState(0);
@@ -73,11 +78,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     unlocking.current = true;
     try {
       setLockError(undefined);
+      // During a ban the system prompt is never shown, so it cannot be retried in a loop.
+      if (lockoutRemainingMs(lockout, Date.now()) > 0) return;
       const res = await authenticate(t('lock.prompt'), t('common.cancel'));
       if (!res.ok) {
-        setLockError(t('lock.failed'));
+        const next = NOT_A_FAILED_TRY.has(res.error) ? lockout : recordUnlockFailure(lockout, Date.now());
+        setLockout(next);
+        await saveLockout(next).catch(() => undefined);
+        const left = attemptsLeft(next, Date.now());
+        // While banned the lock screen shows the countdown instead.
+        setLockError(left === 0 ? undefined : next === lockout ? t('lock.failed') : t(left === 1 ? 'lock.attemptsLeft.one' : 'lock.attemptsLeft.other', { n: left }));
         return;
       }
+      const cleared = recordUnlockSuccess(Date.now());
+      setLockout(cleared);
+      await saveLockout(cleared).catch(() => undefined);
       if (relocked) {
         setRelocked(false);
         return;
@@ -86,7 +101,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } finally {
       unlocking.current = false;
     }
-  }, [openVault, relocked, t]);
+  }, [lockout, openVault, relocked, t]);
 
   const retry = useCallback(() => {
     setPhase('booting');
@@ -98,9 +113,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const [p, a] = await Promise.all([loadPrefs(), lockAvailability()]);
+        const [p, a, l] = await Promise.all([loadPrefs(), lockAvailability(), loadLockout()]);
         if (cancelled) return;
         setPrefsState(p);
+        setLockout(l);
         setAvailability(a);
         if (lockRequired(p, a)) setPhase('locked');
         else await openVault();
@@ -173,7 +189,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const session: Session = { prefs, availability, t, initialJson, setPrefs, wipeEverything };
 
   if (phase === 'booting') return null;
-  if (phase === 'locked') return <LockScreen t={t} onUnlock={unlock} error={lockError} />;
+  if (phase === 'locked') return <LockScreen t={t} onUnlock={unlock} error={lockError} bannedUntil={lockout.bannedUntil} lastSeen={lockout.lastSeen} />;
   if (phase !== 'ready') return <LockScreen t={t} failure={phase} onRetry={retry} onReset={wipeEverything} />;
 
   const hidden = relocked || covered;
@@ -186,7 +202,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         aria-hidden={hidden}>
         {children}
       </View>
-      {relocked ? <LockScreen t={t} onUnlock={unlock} error={lockError} overlay /> : covered ? <PrivacyCover /> : null}
+      {relocked ? <LockScreen t={t} onUnlock={unlock} error={lockError} bannedUntil={lockout.bannedUntil} lastSeen={lockout.lastSeen} overlay /> : covered ? <PrivacyCover /> : null}
     </SessionContext.Provider>
   );
 }

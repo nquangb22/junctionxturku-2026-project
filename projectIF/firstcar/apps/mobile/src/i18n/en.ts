@@ -418,6 +418,11 @@ export const en = {
   'photo.galleryLabel': 'Example photos of a {model}: front, back and inside. Not the car in this ad.',
   'home.demoTitle': 'Try an example ad',
   'home.demoBody': 'Pick a car to see how FirstCar checks an ad.',
+  'lock.attemptsLeft.one': 'Could not unlock. 1 attempt left before FirstCar locks for a while.',
+  'lock.attemptsLeft.other': 'Could not unlock. {n} attempts left before FirstCar locks for a while.',
+  'lock.banned': 'Too many failed attempts. Try again in {time}.',
+  'lock.bannedHint': 'Each further failed attempt makes the wait longer.',
+  'lock.bannedButton': 'Locked · {time}',
 } as const;
 
 export type MessageKey = keyof typeof en;
