@@ -51,7 +51,11 @@
           "faceIDPermission": "FirstCar uses Face ID to unlock your encrypted budget and car checks."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
