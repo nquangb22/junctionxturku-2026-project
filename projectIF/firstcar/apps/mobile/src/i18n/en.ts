@@ -407,6 +407,12 @@ export const en = {
   'settings.llmMockHint': 'Uses prepared AI answers for the demo ads instead of calling an AI service.',
   'settings.skipLockHint': 'Opens the app without Face ID or fingerprint while presenting.',
   'item.evidenceNote': 'What did you see, or what does the document say?',
+  'photo.example': 'Example photo of a {model}, not the car in this ad.',
+  'photo.credit': 'Photo: {author}, {license}, Wikimedia Commons',
+  'photo.heroAlt': 'Cars parked by a road in Lapland in autumn',
+  'settings.credits': 'Photo credits',
+  'settings.creditsHint': 'Real photos from Wikimedia Commons, used under their Creative Commons licences. Tap one to see the original.',
+  'photo.heroName': 'Main page: Lapland road',
 } as const;
 
 export type MessageKey = keyof typeof en;

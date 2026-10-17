@@ -409,4 +409,10 @@ export const fi: Record<MessageKey, string> = {
   'settings.llmMockHint': 'Käyttää demoilmoituksille valmiita tekoälyvastauksia tekoälypalvelun kutsumisen sijaan.',
   'settings.skipLockHint': 'Avaa sovelluksen ilman Face ID:tä tai sormenjälkeä esityksen aikana.',
   'item.evidenceNote': 'Mitä näit, tai mitä asiakirjassa lukee?',
+  'photo.example': 'Esimerkkikuva: {model}. Ei ilmoituksen auto.',
+  'photo.credit': 'Kuva: {author}, {license}, Wikimedia Commons',
+  'photo.heroAlt': 'Autoja pysäköitynä tien varteen Lapissa syksyllä',
+  'settings.credits': 'Kuvien tekijät',
+  'settings.creditsHint': 'Oikeita valokuvia Wikimedia Commonsista, käytetty niiden Creative Commons -lisenssien mukaisesti. Napauta nähdäksesi alkuperäisen.',
+  'photo.heroName': 'Etusivu: tie Lapissa',
 };

@@ -84,13 +84,15 @@ export function Row({ label, value, hint }: { label: string; value: string; hint
 }
 
 /** A soft beige panel that opens a screen: icon, headline and an optional line under it. */
-export function Hero({ icon, title, body, children }: { icon: IconName; title: string; body?: string; children?: ReactNode }) {
+export function Hero({ icon, title, body, image, children }: { icon: IconName; title: string; body?: string; image?: ReactNode; children?: ReactNode }) {
   const p = usePalette();
   return (
     <View style={[styles.hero, { backgroundColor: p.hero }]}>
-      <View style={[styles.heroIcon, { backgroundColor: p.surface }]}>
-        <Icon name={icon} size={28} color={p.primary} />
-      </View>
+      {image ?? (
+        <View style={[styles.heroIcon, { backgroundColor: p.surface }]}>
+          <Icon name={icon} size={28} color={p.primary} />
+        </View>
+      )}
       <Txt variant="title" accessibilityRole="header">
         {title}
       </Txt>
@@ -201,11 +203,14 @@ export function NavCard({
   right,
   tone,
   accessibilityLabel,
+  leading,
 }: {
   title: string;
   subtitle?: string;
   onPress: () => void;
   right?: ReactNode;
+  /** Shown before the title, e.g. a photo thumbnail. */
+  leading?: ReactNode;
   tone?: StatusTone;
   accessibilityLabel?: string;
 }) {
@@ -217,6 +222,7 @@ export function NavCard({
       accessibilityLabel={accessibilityLabel ?? (subtitle ? `${title}. ${subtitle}` : title)}
       onPress={onPress}
       style={({ pressed }) => [styles.card, styles.navCard, { backgroundColor: pressed ? p.surfaceAlt : (toned?.bg ?? p.surface), borderColor: toned ? `${toned.fg}33` : p.border }]}>
+      {leading}
       <View style={{ flex: 1, gap: Spacing.xs }}>
         <Txt variant="bodyStrong">{title}</Txt>
         {subtitle ? <Txt variant="small">{subtitle}</Txt> : null}

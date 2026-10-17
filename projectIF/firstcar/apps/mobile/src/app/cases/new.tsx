@@ -12,6 +12,7 @@ import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { notify } from '@/ui/dialog';
 import { IconLine } from '@/ui/icon';
+import { carPhoto, PhotoCard } from '@/ui/photos';
 import { Button, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function NewCase() {
@@ -57,6 +58,8 @@ export default function NewCase() {
     }
   };
 
+  const demoCar = DEMO_ADS.find((a) => a.id === demoId)?.llm.car;
+  const demoPhoto = demoCar ? carPhoto(demoCar) : undefined;
   return (
     <Screen footer={<Button label={t('new.analyse')} onPress={analyse} loading={busy} disabled={!text.trim()} />}>
       <Stack.Screen options={{ title: t('new.title') }} />
@@ -83,6 +86,7 @@ export default function NewCase() {
       <IconLine icon="lock" variant="caption">{t('new.redactNote')}</IconLine>
       <Section title={t('new.demo')}>
         <Choice label={t('new.demo')} value={demoId} onChange={pickDemo} options={DEMO_ADS.map((a) => ({ value: a.id, label: a.label }))} />
+        {demoPhoto ? <PhotoCard photo={demoPhoto} t={t} /> : null}
       </Section>
     </Screen>
   );

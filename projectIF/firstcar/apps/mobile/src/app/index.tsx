@@ -9,6 +9,7 @@ import { useStore } from '@/state/store';
 import { Badge, Button, Hero, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 import { caseCounts, caseTitle } from '@/ui/case-helpers';
 import { confirmAction } from '@/ui/dialog';
+import { carPhoto, PhotoCard, PhotoThumb, PHOTOS } from '@/ui/photos';
 
 const OWNED = new Set(['owned', 'registered']);
 
@@ -36,7 +37,7 @@ export default function Home() {
   return (
     <Screen>
       <Stack.Screen options={{ title: t('appName'), headerRight: () => <Button kind="ghost" label={t('home.settings')} onPress={() => router.push('/settings')} /> }} />
-      <Hero icon="car" title={t('home.tagline')}>
+      <Hero icon="car" title={t('home.tagline')} image={<PhotoCard photo={PHOTOS.hero} t={t} alt={t('photo.heroAlt')} aspectRatio={3 / 2} />}>
         {Platform.OS === 'web' ? <Badge tone="warning" icon="warning" label={t('home.privacyWeb')} /> : <Badge tone="success" icon="lock" label={t('home.privacy')} />}
       </Hero>
 
@@ -89,6 +90,7 @@ function CaseCard({ c }: { c: PurchaseCase }) {
   const counts = caseCounts(c);
   const tone: StatusTone = counts.problems > 0 ? 'danger' : c.status === 'ready_to_buy' ? 'success' : c.status === 'walked_away' ? 'neutral' : 'info';
   const firstProblem = c.items.find((i) => i.status === 'not_verified');
+  const photo = carPhoto(c.listing.car);
   const problemLabel =
     firstProblem?.origin.kind === 'claim' ? CLAIM_TITLES[firstProblem.origin.claimType][prefs.locale] : undefined;
   return (
@@ -98,6 +100,7 @@ function CaseCard({ c }: { c: PurchaseCase }) {
         .filter(Boolean)
         .join(' · ')}
       tone={tone}
+      leading={photo ? <PhotoThumb photo={photo} /> : undefined}
       onPress={() => router.push({ pathname: '/cases/[id]', params: { id: c.id } })}
     />
   );

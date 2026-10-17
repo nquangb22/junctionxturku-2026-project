@@ -1,9 +1,10 @@
 import { Stack, router } from 'expo-router';
-import { Platform, Share } from 'react-native';
+import { Platform, Share, View } from 'react-native';
 
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
 import { confirmAction, notify } from '@/ui/dialog';
+import { PhotoCredit, PHOTOS } from '@/ui/photos';
 import { Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Settings() {
@@ -72,6 +73,18 @@ export default function Settings() {
         <Button kind="secondary" label={t('settings.export')} onPress={() => void exportData()} />
         <Button kind="danger" label={t('settings.deleteAll')} onPress={confirmWipe} />
       </Section>
+      <Section title={t('settings.credits')}>
+        <Txt variant="caption">{t('settings.creditsHint')}</Txt>
+        <Card>
+          {Object.values(PHOTOS).map((ph) => (
+            <View key={ph.page} style={{ gap: 2 }}>
+              <Txt variant="small">{ph.model ?? t('photo.heroName')}</Txt>
+              <PhotoCredit photo={ph} t={t} />
+            </View>
+          ))}
+        </Card>
+      </Section>
+
       <Section title={t('settings.demo')}>
         <Txt variant="caption">{t('settings.demoHint')}</Txt>
         <Txt variant="small">{t('settings.llmMock')}</Txt>
