@@ -53,6 +53,18 @@ export default function CaseOverview() {
     decide: 'case.locked.inspection',
     insure: 'case.locked.insure',
   };
+  // Started but not done: shown as "In progress" so every step has exactly one status.
+  const started: Record<StepKey, boolean> = {
+    claims: c.status === 'reviewing_claims',
+    registry: false,
+    ledger: c.items.some((i) => i.status !== 'unchecked' || i.questionAsked || i.acceptedRisk),
+    inspection: c.status === 'inspecting' || c.testDriveDone || c.inspectionDone || !!c.inspectionBooking,
+    contract: c.status === 'contract_prep',
+    decide: c.status === 'ready_to_buy',
+    insure: c.status === 'bought' || c.status === 'insuring' || c.status === 'registered',
+  };
+  const stepStatus = (k: StepKey) =>
+    done[k] ? '✓' : !enabled[k] ? `— · 🔒 ${t(lockReason[k])}` : started[k] ? t('case.inProgress') : '—';
   const done: Record<StepKey, boolean> = {
     claims: confirmed,
     registry: !!c.registry,
@@ -92,6 +104,11 @@ export default function CaseOverview() {
         <Badge tone={c.status === 'walked_away' ? 'neutral' : 'info'} label={t(`caseStatus.${c.status}`)} />
         {confirmed ? <Badge tone={counts.problems ? 'danger' : 'neutral'} label={t('case.summary', counts)} /> : null}
       </View>
+      {confirmed ? (
+        <Txt variant="caption">
+          {t('case.itemsExplain', { claims: c.items.filter((i) => i.origin.kind !== 'mandatory').length, checks: c.items.filter((i) => i.origin.kind === 'mandatory').length })}
+        </Txt>
+      ) : null}
       {c.listing.injectionSuspected ? <Badge tone="danger" icon="⚠️" label={t('ledger.redFlag')} /> : null}
 
       <Section title={t('case.steps')}>
@@ -99,7 +116,7 @@ export default function CaseOverview() {
           <NavCard
             key={s.key}
             title={`${i + 1}. ${t(s.label)}`}
-            subtitle={done[s.key] ? '✓' : enabled[s.key] ? undefined : `🔒 ${t(lockReason[s.key])}`}
+            subtitle={[stepStatus(s.key), s.key === 'inspection' && c.inspectionBooking ? `📅 ${c.inspectionBooking.date.slice(0, 10)}` : undefined].filter(Boolean).join(' · ')}
             tone={done[s.key] ? 'success' : undefined}
             onPress={() => {
               if (enabled[s.key]) router.push({ pathname: s.pathname, params: { id: c.id } });

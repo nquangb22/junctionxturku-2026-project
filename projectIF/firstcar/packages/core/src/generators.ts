@@ -15,7 +15,8 @@ import {
 } from './content';
 import { claimForItem, isStale, itemTitle, monthYear } from './ledger';
 import { formatEur, formatKm } from './money';
-import type { ChecklistItem, ContractClause, InspectionPlan, Locale, PurchaseCase, SellerClaim, VerificationItem } from './types';
+import { quoteTranslationFor } from './translate';
+import type { ChecklistItem, ContractClause, ContractField, InspectionPlan, Locale, PurchaseCase, SellerClaim, VerificationItem } from './types';
 
 export interface SellerQuestion {
   itemId: string;
@@ -118,6 +119,29 @@ export function inspectionPlan(c: PurchaseCase, locale: Locale, now: Date): Insp
 
 const ASSURANCE_EXCLUDED = new Set(['seller_situation', 'other', 'price']);
 
+const BLANK = '______';
+
+/**
+ * Contract blank values: what the buyer typed, else what the case already knows
+ * (a verified owner's name, the registry VIN), else a blank line to fill by hand.
+ */
+export function contractFieldValues(c: PurchaseCase): Record<ContractField, string> {
+  const typed = c.contractFields ?? {};
+  const ownerVerified = c.items.some((i) => i.origin.kind === 'mandatory' && i.origin.checkId === 'owner_matches_seller' && i.status === 'verified');
+  const known: Partial<Record<ContractField, string>> = {
+    seller: ownerVerified ? c.registry?.ownership?.ownerNameLocal : undefined,
+    vin: c.registry?.vin,
+  };
+  const pick = (f: ContractField) => typed[f]?.trim() || known[f] || BLANK;
+  return { seller: pick('seller'), buyer: pick('buyer'), vin: pick('vin'), odometer: pick('odometer'), handover: pick('handover') };
+}
+
+/** ` (“translation”)` after a quote in the other language, so both parties can read it. */
+function translationSuffix(claim: SellerClaim, locale: Locale): string {
+  const tr = quoteTranslationFor(claim, locale);
+  return tr ? (locale === 'fi' ? ` (”${tr}”)` : ` (“${tr}”)`) : '';
+}
+
 /** Evidence or a finding says the claim is false. */
 export function isContradicted(c: PurchaseCase, item: VerificationItem): boolean {
   return item.findings.some((f) => f.kind === 'contradiction') || c.evidence.some((e) => e.outcome === 'contradicts' && e.itemIds.includes(item.id));
@@ -128,8 +152,8 @@ function disputedClause(c: PurchaseCase, item: VerificationItem, claim: SellerCl
   const regKm = c.registry?.inspection?.odometerKmAtLast;
   const text =
     claim.type === 'odometer' && claim.value.kind === 'km' && regKm !== undefined
-      ? renderTemplate(DISPUTED_ODOMETER_TEXT[locale], { regKm: formatKm(regKm), date: monthYear(c.registry?.inspection?.lastDate ?? ''), adKm: formatKm(claim.value.km) })
-      : renderTemplate(DISPUTED_TEXT[locale], { claim: title, quote: claim.quote });
+      ? renderTemplate(DISPUTED_ODOMETER_TEXT[locale], { regKm: formatKm(regKm), date: monthYear(c.registry?.inspection?.lastDate ?? ''), adKm: formatKm(claim.value.km), odometer: contractFieldValues(c).odometer })
+      : renderTemplate(DISPUTED_TEXT[locale], { claim: title, quote: claim.quote, translation: translationSuffix(claim, locale) });
   return { id: `dispute:${item.id}`, kind: 'disputed_claim', text, sourceItemIds: [item.id], included: true };
 }
 
@@ -146,11 +170,12 @@ export function generateClauses(c: PurchaseCase, locale: Locale, previous: Contr
   const keys = keysClaim?.value.kind === 'count' ? keysClaim.value.n : '__';
   const price = car.price ? formatEur(car.price) : '______';
 
+  const fields = contractFieldValues(c);
   const base: ContractClause[] = [
-    clause('parties', CLAUSE_TEXTS.parties[locale], []),
-    clause('vehicle_identity', renderTemplate(CLAUSE_TEXTS.vehicle_identity[locale], { car: carLabel, plate }), ['mandatory:vin_matches']),
+    clause('parties', renderTemplate(CLAUSE_TEXTS.parties[locale], fields), []),
+    clause('vehicle_identity', renderTemplate(CLAUSE_TEXTS.vehicle_identity[locale], { car: carLabel, plate, ...fields }), ['mandatory:vin_matches']),
     clause('price_payment', renderTemplate(CLAUSE_TEXTS.price_payment[locale], { price }), ['mandatory:safe_payment']),
-    clause('handover_time', CLAUSE_TEXTS.handover_time[locale], []),
+    clause('handover_time', renderTemplate(CLAUSE_TEXTS.handover_time[locale], fields), []),
   ];
 
   const assurances: ContractClause[] = c.items
@@ -162,7 +187,7 @@ export function generateClauses(c: PurchaseCase, locale: Locale, previous: Contr
       return {
         id: `assurance:${i.id}`,
         kind: 'seller_assurance',
-        text: renderTemplate(ASSURANCE_TEXT[locale], { claim: title, quote: claim.quote }),
+        text: renderTemplate(ASSURANCE_TEXT[locale], { claim: title, quote: claim.quote, translation: translationSuffix(claim, locale) }),
         sourceItemIds: [i.id],
         included: c.assuranceChoices?.[`assurance:${i.id}`] ?? true,
       };

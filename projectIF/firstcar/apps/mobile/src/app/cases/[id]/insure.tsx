@@ -1,4 +1,4 @@
-import { formatEur } from '@firstcar/core';
+import { OWNERSHIP_NOTIFICATION_DAYS, eur, formatEur, type AgeBand, type CoverIntent } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
 
@@ -8,7 +8,8 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { caseTitle, formatDate } from '@/ui/case-helpers';
-import { Button, Card, Row, Screen, Section, Txt } from '@/ui/primitives';
+import { InsuredCard } from '@/ui/insured-card';
+import { Button, Card, Choice, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
 
 export default function Insure() {
@@ -18,14 +19,21 @@ export default function Insure() {
   const p = usePalette();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  // Asked inline when there is no budget profile: only the fields the quote needs, no defaults.
+  const [quick, setQuick] = useState<{ ageBand?: AgeBand; firstCar?: boolean; cover?: CoverIntent; deductible?: number }>({});
   if (!c) return <Redirect href="/" />;
 
   const profile = data.profile;
-  // No invented defaults: without the buyer's own profile there is nothing to consent to.
+  // No invented defaults: without the buyer's own answers there is nothing to consent to.
   const buyer = profile
     ? { ageBand: profile.ageBand, firstTimeDriver: profile.firstTimeDriver, coverIntent: profile.coverIntent, deductible: profile.deductible }
-    : undefined;
+    : quick.ageBand && quick.firstCar !== undefined && quick.cover && quick.deductible
+      ? { ageBand: quick.ageBand, firstTimeDriver: quick.firstCar, coverIntent: quick.cover, deductible: eur(quick.deductible) }
+      : undefined;
   const h = c.handoff;
+  const boughtAt = c.decision?.kind === 'buy' ? c.decision.at : undefined;
+  // From the moment the car is bought, not only after a quote.
+  const deadline = h?.ownershipNotificationBy ?? (boughtAt ? new Date(Date.parse(boughtAt) + OWNERSHIP_NOTIFICATION_DAYS * 86_400_000).toISOString() : undefined);
 
   const step = async (fn: () => Promise<string | undefined>) => {
     setBusy(true);
@@ -74,7 +82,11 @@ export default function Insure() {
       <Stack.Screen options={{ title: t('insure.title') }} />
       <Card tone="warning">
         <Txt variant="h2">{t('insure.mandatory')}</Txt>
-        {h ? <Txt variant="bodyStrong">{t('insure.deadline', { date: formatDate(h.ownershipNotificationBy, prefs.locale) })}</Txt> : null}
+        {deadline ? <Txt variant="bodyStrong">{t('insure.deadline', { date: formatDate(deadline, prefs.locale) })}</Txt> : null}
+      </Card>
+      <Card>
+        <Txt variant="bodyStrong">{t('insure.howToTitle')}</Txt>
+        <Txt variant="small">{t('insure.howTo')}</Txt>
       </Card>
       <Txt variant="small">{t('insure.neutral')}</Txt>
       <DemoBadge t={t} />
@@ -98,11 +110,33 @@ export default function Insure() {
 
       {error ? <Txt color={p.danger}>{error}</Txt> : null}
 
-      {c.status === 'bought' && !buyer ? (
-        <Card tone="warning">
-          <Txt>{t('insure.needProfile')}</Txt>
-          <Button label={t('insure.toProfile')} onPress={() => router.push('/ready')} />
-        </Card>
+      {c.status === 'bought' && !profile ? (
+        <Section title={t('insure.quickTitle')}>
+          <Card>
+            <Txt variant="small">{t('ready.age')}</Txt>
+            <Choice label={t('ready.age')} value={quick.ageBand} onChange={(ageBand) => setQuick((q) => ({ ...q, ageBand }))} options={(['18-19', '20-25', '26-34', '35+'] as const).map((a) => ({ value: a, label: a }))} />
+            <Txt variant="small">{t('ready.firstTime')}</Txt>
+            <Choice
+              label={t('ready.firstTime')}
+              value={quick.firstCar}
+              onChange={(firstCar) => setQuick((q) => ({ ...q, firstCar }))}
+              options={[
+                { value: true, label: t('common.yes') },
+                { value: false, label: t('common.no') },
+              ]}
+            />
+            <Txt variant="small">{t('ready.cover')}</Txt>
+            <Choice
+              label={t('ready.cover')}
+              value={quick.cover}
+              onChange={(cover) => setQuick((q) => ({ ...q, cover }))}
+              options={(['liability_only', 'liability_plus_partial', 'liability_plus_comprehensive'] as const).map((x) => ({ value: x, label: t(`cover.${x}`) }))}
+            />
+            <Txt variant="small">{t('ready.deductible')}</Txt>
+            <Choice label={t('ready.deductible')} value={quick.deductible} onChange={(deductible) => setQuick((q) => ({ ...q, deductible }))} options={[150, 300, 500].map((d) => ({ value: d, label: `${d} €` }))} />
+          </Card>
+          <Button kind="ghost" label={t('insure.orFull')} onPress={() => router.push({ pathname: '/ready', params: { from: 'insure', caseId: c.id } })} />
+        </Section>
       ) : null}
       {c.status === 'bought' && buyer ? <Button label={t('insure.consent')} onPress={consent} loading={busy} /> : null}
       {h?.status === 'quote_received' && h.quoteMonthly ? (
@@ -111,6 +145,7 @@ export default function Insure() {
           <Button label={t('insure.bind')} onPress={bind} loading={busy} />
         </Card>
       ) : null}
+      <InsuredCard c={c} />
       {h?.status === 'bound' ? <Button label={t('insure.register')} onPress={register} loading={busy} /> : null}
       {c.status === 'registered' || c.status === 'owned' ? (
         <Card tone="success">

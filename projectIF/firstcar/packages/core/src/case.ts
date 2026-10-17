@@ -15,15 +15,18 @@ import {
   registryEvidence,
 } from './ledger';
 import type { AnalysedAd } from './pipeline';
+import { withQuoteTranslation } from './translate';
 import type {
   AgeBand,
   CaseStatus,
   ClaimType,
   ClaimValue,
+  ContractField,
   CoverIntent,
   Evidence,
   EvidenceFact,
   EvidenceKind,
+  ISO,
   Locale,
   Money,
   PurchaseCase,
@@ -33,7 +36,7 @@ import type {
 export const OWNERSHIP_NOTIFICATION_DAYS = 7; // ⚠️ verify (Traficom)
 
 export type CaseEvent =
-  | { type: 'claim_edited'; claimId: string; value: ClaimValue }
+  | { type: 'claim_edited'; claimId: string; value?: ClaimValue; quote?: string }
   | { type: 'claim_removed'; claimId: string }
   | { type: 'claim_added'; claimType: ClaimType; value: ClaimValue; quote: string }
   | { type: 'claims_confirmed' }
@@ -46,11 +49,13 @@ export type CaseEvent =
   | { type: 'risk_accepted'; itemId: string }
   | { type: 'risk_unaccepted'; itemId: string }
   | { type: 'start_inspection' }
-  | { type: 'test_drive_done' }
+  | { type: 'test_drive_done'; answers?: Record<string, 'ok' | 'issue'> }
+  | { type: 'inspection_booked'; partner: string; date: ISO }
   | { type: 'inspection_result'; outcomes: Record<string, 'ok' | 'issue'> }
   | { type: 'inspection_skipped' }
   | { type: 'start_contract' }
   | { type: 'clause_toggled'; clauseId: string }
+  | { type: 'contract_field_set'; field: ContractField; value: string }
   | { type: 'mark_ready' }
   | { type: 'walk_away' }
   | { type: 'reopen' }
@@ -177,9 +182,20 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
   const ledgerOpen = LEDGER_OPEN.has(c.status);
 
   switch (e.type) {
-    case 'claim_edited':
+    case 'claim_edited': {
       if (!inReview) return fail('claims_locked');
-      return bump(c, { ...c, claims: c.claims.map((cl) => (cl.id === e.claimId ? { ...cl, value: e.value, extractor: 'user', confidence: 'high' } : cl)) }, ctx);
+      const quote = e.quote?.trim();
+      if (e.quote !== undefined && !quote) return fail('empty_quote');
+      return bump(c, {
+        ...c,
+        claims: c.claims.map((cl) => {
+          if (cl.id !== e.claimId) return cl;
+          const edited = { ...cl, value: e.value ?? cl.value, extractor: 'user' as const, confidence: 'high' as const };
+          // A rewritten quote no longer points at the ad text, so drop its highlight offsets.
+          return quote !== undefined && quote !== cl.quote ? withQuoteTranslation({ ...edited, quote, rawStart: undefined, rawEnd: undefined }) : edited;
+        }),
+      }, ctx);
+    }
 
     case 'claim_removed':
       if (!inReview) return fail('claims_locked');
@@ -188,7 +204,7 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
     case 'claim_added': {
       if (!inReview) return fail('claims_locked');
       const id = nextNumericId(c.claims.map((cl) => cl.id), 'u');
-      const claim = { id, type: e.claimType, value: e.value, quote: e.quote, quoteStart: Number.MAX_SAFE_INTEGER, extractor: 'user' as const, confidence: 'high' as const };
+      const claim = withQuoteTranslation({ id, type: e.claimType, value: e.value, quote: e.quote, quoteStart: Number.MAX_SAFE_INTEGER, extractor: 'user' as const, confidence: 'high' as const });
       return bump(c, { ...c, claims: [...c.claims, claim] }, ctx);
     }
 
@@ -263,13 +279,19 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
 
     case 'test_drive_done':
       if (!ledgerOpen) return fail('ledger_closed');
-      return bump(c, { ...c, testDriveDone: true }, ctx);
+      return bump(c, { ...c, testDriveDone: true, testDriveAnswers: e.answers ?? c.testDriveAnswers }, ctx);
+
+    case 'inspection_booked':
+      if (!ledgerOpen) return fail('ledger_closed');
+      if (!e.partner.trim() || Number.isNaN(Date.parse(e.date))) return fail('invalid_booking');
+      return bump(c, { ...c, inspectionBooking: { partner: e.partner.trim(), date: e.date } }, ctx);
 
     case 'inspection_result': {
       if (!ledgerOpen) return fail('ledger_closed');
       const entries = Object.entries(e.outcomes).filter(([itemId]) => c.items.some((i) => i.id === itemId)).filter(([, outcome]) => outcome === 'ok' || outcome === 'issue');
       if (entries.length === 0) return fail('no_outcomes');
-      let acc = c;
+      // An updated result replaces the earlier report for the same item instead of stacking on it.
+      let acc: PurchaseCase = { ...c, evidence: c.evidence.filter((ev) => !(ev.kind === 'inspection_report' && ev.itemIds.length === 1 && entries.some(([id]) => id === ev.itemIds[0]))) };
       for (const [itemId, outcome] of entries) {
         acc = { ...acc, evidence: [...acc.evidence, makeEvidence(acc, { kind: 'inspection_report', itemIds: [itemId], outcome: outcome === 'ok' ? 'supports' : 'contradicts' }, ctx.now)] };
       }
@@ -292,6 +314,10 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
     case 'clause_toggled':
       if (!ledgerOpen) return fail('ledger_closed');
       return bump(c, settle({ ...c, clauses: c.clauses.map((cl) => (cl.id === e.clauseId ? { ...cl, included: !cl.included } : cl)) }, ctx), ctx);
+
+    case 'contract_field_set':
+      if (!ledgerOpen) return fail('ledger_closed');
+      return bump(c, settle({ ...c, contractFields: { ...c.contractFields, [e.field]: e.value.trim().slice(0, 120) } }, ctx), ctx);
 
     case 'mark_ready':
       if (c.status !== 'contract_prep') return fail('invalid_transition');

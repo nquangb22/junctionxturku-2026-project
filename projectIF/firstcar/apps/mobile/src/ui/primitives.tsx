@@ -127,22 +127,38 @@ export function Button({
 export interface ChoiceOption<T> {
   value: T;
   label: string;
+  disabled?: boolean;
 }
 
 /** Single-choice chips (radio group). */
-export function Choice<T extends string | number | boolean>({ options, value, onChange, label }: { options: ChoiceOption<T>[]; value: T | undefined; onChange: (v: T) => void; label: string }) {
+export function Choice<T extends string | number | boolean>({
+  options,
+  value,
+  onChange,
+  label,
+  disabled,
+}: {
+  options: ChoiceOption<T>[];
+  value: T | undefined;
+  onChange: (v: T) => void;
+  label: string;
+  disabled?: boolean;
+}) {
   const p = usePalette();
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel={label} style={styles.chips}>
       {options.map((o) => {
         const selected = o.value === value;
+        const off = disabled || o.disabled;
         return (
           <Pressable
             key={String(o.value)}
             accessibilityRole="radio"
-            accessibilityState={{ checked: selected, selected }}
+            accessibilityState={{ checked: selected, selected, disabled: off }}
+            aria-checked={selected}
+            disabled={off}
             onPress={() => onChange(o.value)}
-            style={[styles.chip, { backgroundColor: selected ? p.primary : p.surface, borderColor: selected ? p.primary : p.border }]}>
+            style={[styles.chip, { backgroundColor: selected ? p.primary : p.surface, borderColor: selected ? p.primary : p.border, opacity: off && !selected ? 0.5 : 1 }]}>
             <Text style={[styles.chipText, { color: selected ? p.onPrimary : p.text }]}>{o.label}</Text>
           </Pressable>
         );

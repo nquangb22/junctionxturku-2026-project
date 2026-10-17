@@ -46,7 +46,11 @@ export interface BuyerProfile {
   annualKm?: number;
   coverIntent: CoverIntent;
   deductible: Money;
+  /** How the purchase price is paid. Undefined = not asked (older profiles). */
+  payment?: PaymentMethod;
 }
+
+export type PaymentMethod = 'savings' | 'loan' | 'unsure';
 
 export interface CarSpec {
   make: string;
@@ -62,6 +66,7 @@ export interface CarSpec {
 }
 
 export type BudgetLineKey =
+  | 'loan'
   | 'insurance'
   | 'energy'
   | 'parking'
@@ -83,6 +88,20 @@ export type VerdictLevel = 'comfortable' | 'manageable' | 'tight' | 'over_budget
 export interface Verdict {
   level: VerdictLevel;
   shareOfIncome?: number; // 0..1
+  /** Middle of the income range the share was computed against. */
+  incomeMid?: Money;
+}
+
+/** Can the price and the savings buffer be paid up front? */
+export interface CashCheck {
+  price: Money;
+  buffer: Money;
+  needed: Money;
+  /** Middle of the savings range; undefined when savings were skipped. */
+  available?: Money;
+  /** Borrowed amount behind the loan line, if any. */
+  loanPrincipal?: Money;
+  coveredWithoutLoan?: boolean;
 }
 
 export interface SavingsBuffer {
@@ -130,6 +149,8 @@ export interface OwnershipBudget {
   monthlyTotal: Money;
   verdict: Verdict;
   buffer: SavingsBuffer;
+  /** Only when the car has a price. */
+  cashCheck?: CashCheck;
   scenarioIds: string[];
   computedAt: ISO;
 }
@@ -195,6 +216,10 @@ export interface SellerClaim {
   rawEnd?: number;
   extractor: 'llm' | 'rules' | 'user';
   confidence: Confidence;
+  /** Language of the quote; set at extraction. */
+  quoteLang?: Locale;
+  /** The quote in the other app language, or null when no translation is available. */
+  quoteTranslated?: string | null;
 }
 
 export type EvidenceStrength = 'official' | 'professional' | 'document' | 'observed' | 'seller_statement';
@@ -238,6 +263,7 @@ export type FindingCode =
   | 'tax_unpaid'
   | 'finance_owner'
   | 'owner_not_seller'
+  | 'owner_matches'
   | 'vin_mismatch'
   | 'scam_pattern'
   | 'injection_text'
@@ -309,6 +335,8 @@ export interface InspectionPlan {
   prePurchase: { recommended: boolean; reasons: string[]; focus: string[] };
 }
 
+export type ContractField = 'seller' | 'buyer' | 'vin' | 'odometer' | 'handover';
+
 export type ClauseKind =
   | 'parties'
   | 'vehicle_identity'
@@ -379,6 +407,12 @@ export interface PurchaseCase {
   inspectionDone: boolean;
   /** The buyer chose to go on without a pre-purchase inspection; inspectable items stay open. */
   inspectionSkipped?: boolean;
+  /** Last saved test-drive checklist answers, by checklist item id. */
+  testDriveAnswers?: Record<string, 'ok' | 'issue'>;
+  /** Values the buyer typed into the contract blanks. */
+  contractFields?: Partial<Record<ContractField, string>>;
+  /** Demo partner booking for the pre-purchase inspection. */
+  inspectionBooking?: { partner: string; date: ISO };
   clauses: ContractClause[];
   /** Last include/exclude choice per assurance clause id, kept while the clause is absent (item verified). */
   assuranceChoices?: Record<string, boolean>;

@@ -1,4 +1,5 @@
 import { Stack, router } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
@@ -29,7 +30,7 @@ export default function Welcome() {
         {t('welcome.title')}
       </Txt>
       <Card>
-        <Txt>🔒 {t('welcome.p1')}</Txt>
+        <Txt>🔒 {t(Platform.OS === 'web' ? 'welcome.p1Web' : 'welcome.p1')}</Txt>
       </Card>
       <Card>
         <Txt>🤖 {t('welcome.p2')}</Txt>

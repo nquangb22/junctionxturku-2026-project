@@ -6,6 +6,7 @@ import {
   itemTitle,
   mileageGap,
   questionFor,
+  quoteTranslationFor,
   renderFinding,
   type Evidence,
   type EvidenceKind,
@@ -25,7 +26,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { confirmAction } from '@/ui/dialog';
-import { StatusPill } from '@/ui/status';
+import { QuoteTranslation, StatusPill } from '@/ui/status';
 
 const USER_EVIDENCE: EvidenceKind[] = ['service_record', 'receipt', 'photo', 'test_drive_note', 'seller_message'];
 
@@ -86,6 +87,7 @@ export default function ItemDetail() {
         <Card>
           <Txt variant="caption">{t('item.adSays')}</Txt>
           <Txt variant="bodyStrong">“{claim.quote}”</Txt>
+          <QuoteTranslation text={quoteTranslationFor(claim, prefs.locale)} t={t} />
         </Card>
       ) : null}
       <Txt variant="small">{t('item.needs', { strength: t(`strength.${item.minStrength}`) })}</Txt>
@@ -120,7 +122,12 @@ export default function ItemDetail() {
         <Section title={t('item.question')}>
           <Card>
             <Txt>{question.buyerText}</Txt>
-            {prefs.locale !== 'fi' ? <Txt variant="small">🇫🇮 {question.sellerText}</Txt> : null}
+            {prefs.locale !== 'fi' ? (
+              <Txt variant="small">
+                <Txt variant="caption">{t('item.inFinnish')} </Txt>
+                {question.sellerText}
+              </Txt>
+            ) : null}
             <Button kind="secondary" label={copied ? t('common.copied') : t('item.copyQuestion')} onPress={copy} />
             <Button
               kind="ghost"
@@ -173,12 +180,19 @@ function MandatoryControls({ c, item, onResult }: { c: PurchaseCase; item: Verif
       if (!c.registry) return <Txt variant="small">{t('item.needsRegistry')}</Txt>;
       return (
         <Card>
+          <Txt>{t('item.ownerExplain')}</Txt>
+          <Txt variant="bodyStrong" nativeID="owner-name-label">
+            {t('item.ownerName')}
+          </Txt>
+          {c.registry.isMock && c.registry.ownership?.ownerNameLocal ? (
+            <Txt variant="caption">{t('item.demoOwner', { name: c.registry.ownership.ownerNameLocal })}</Txt>
+          ) : null}
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder={t('item.ownerName')}
             placeholderTextColor={p.textSecondary}
             accessibilityLabel={t('item.ownerName')}
+            accessibilityLabelledBy="owner-name-label"
             autoCapitalize="words"
             autoCorrect={false}
             maxLength={80}

@@ -1,4 +1,4 @@
-import { beltDueCost, computeBudget, evaluateGate, formatEur, itemTitle, type GateBlocker } from '@firstcar/core';
+import { beltDueCost, computeBudget, evaluateGate, formatEur, isStale, itemTitle, renderFinding, type GateBlocker, type VerificationItem } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
@@ -10,7 +10,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { carForCase } from '@/ui/case-helpers';
 import { confirmAction } from '@/ui/dialog';
-import { Badge, Button, Card, Screen, Section, Txt } from '@/ui/primitives';
+import { Badge, Button, Card, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Decide() {
   const c = useCase(useCaseId());
@@ -35,6 +35,10 @@ export default function Decide() {
   };
 
   const bought = ['bought', 'insuring', 'registered', 'owned'].includes(c.status);
+  const accepted = c.items.filter((i) => i.acceptedRisk);
+  const due = c.items.filter(isStale);
+  const unchecked = c.items.filter((i) => i.criticality !== 'critical' && i.status === 'unchecked').length;
+  const openItem = (i: VerificationItem) => router.push({ pathname: '/cases/[id]/item/[itemId]', params: { id: c.id, itemId: i.id } });
 
   const confirmBuy = () =>
     confirmAction({
@@ -71,8 +75,7 @@ export default function Decide() {
         </Card>
       ) : gate.passes ? (
         <Card tone="success">
-          <Txt variant="title">✓ {t('decide.ready', { n: gate.acceptedRisks })}</Txt>
-          {gate.staleWarnings ? <Txt>{t('decide.stale', { n: gate.staleWarnings })}</Txt> : null}
+          <Txt variant="title">✓ {t('decide.ready')}</Txt>
         </Card>
       ) : (
         <Section title={t('decide.blocked')}>
@@ -90,6 +93,33 @@ export default function Decide() {
           ))}
         </Section>
       )}
+
+      {!bought && accepted.length ? (
+        <Section title={t('decide.acceptedTitle')}>
+          {accepted.map((i) => (
+            <NavCard key={i.id} title={itemTitle(i, prefs.locale)} tone="warning" onPress={() => openItem(i)} />
+          ))}
+        </Section>
+      ) : null}
+      {!bought && due.length ? (
+        <Section title={t('decide.dueTitle')}>
+          {due.map((i) => (
+            <NavCard
+              key={i.id}
+              title={itemTitle(i, prefs.locale)}
+              subtitle={i.findings.filter((f) => f.kind === 'stale').map((f) => renderFinding(f, prefs.locale)).join(' ')}
+              onPress={() => openItem(i)}
+            />
+          ))}
+          {budget ? <Txt variant="small">{t('decide.dueBudget', { amount: formatEur(budget.monthlyTotal) })}</Txt> : null}
+        </Section>
+      ) : null}
+      {!bought && unchecked ? (
+        <NavCard
+          title={t(unchecked === 1 ? 'decide.unchecked.one' : 'decide.unchecked.other', { n: unchecked })}
+          onPress={() => router.push({ pathname: '/cases/[id]/ledger', params: { id: c.id } })}
+        />
+      ) : null}
 
       {error ? <Txt color={p.danger}>{error}</Txt> : null}
 

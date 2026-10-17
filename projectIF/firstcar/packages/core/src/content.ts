@@ -155,7 +155,7 @@ export const FINDING_TEXTS: Record<FindingCode, Texts> = {
     fi: 'Vastaa rekisteriä ({regKm} katsastuksessa {date}).',
   },
   owners_mismatch: {
-    en: 'The ad says {adOwners} owner(s); the registry shows {regOwners}.',
+    en: 'Owners according to the ad: {adOwners}. According to the registry: {regOwners}.',
     fi: 'Ilmoituksen mukaan omistajia {adOwners}, rekisterin mukaan {regOwners}.',
   },
   year_mismatch: {
@@ -175,8 +175,12 @@ export const FINDING_TEXTS: Record<FindingCode, Texts> = {
     fi: 'Omistaja on rahoitusyhtiö. Myyjä ei välttämättä voi luovuttaa omistusta. Älä osta ennen kuin asia on selvitetty.',
   },
   owner_not_seller: {
-    en: 'The name on the seller\'s ID does not match the registered owner. Do not buy until resolved.',
-    fi: 'Myyjän henkilöllisyystodistuksen nimi ei vastaa rekisteröityä omistajaa. Älä osta ennen kuin asia on selvitetty.',
+    en: 'The name on the seller’s ID does not match the registered owner. Possible reasons: the seller is selling for a family member or friend (ask for a signed power of attorney, valtakirja, and a copy of the owner’s ID), the registry is not yet updated, or this is a scam. Do not pay until the owner situation is clear. (The registered owner’s name is kept on this phone and not shown here.)',
+    fi: 'Myyjän henkilöllisyystodistuksen nimi ei vastaa rekisteröityä omistajaa. Mahdollisia syitä: myyjä myy perheenjäsenen tai ystävän autoa (pyydä allekirjoitettu valtakirja ja kopio omistajan henkilöllisyystodistuksesta), rekisteriä ei ole vielä päivitetty, tai kyse on huijauksesta. Älä maksa ennen kuin omistustilanne on selvä. (Rekisteröidyn omistajan nimi säilytetään tässä puhelimessa eikä sitä näytetä tässä.)',
+  },
+  owner_matches: {
+    en: '✓ The name matches the registered owner.',
+    fi: '✓ Nimi vastaa rekisteröityä omistajaa.',
   },
   vin_mismatch: {
     en: 'The VIN on the car does not match the papers. Do not buy.',
@@ -279,20 +283,20 @@ export const QUESTION_TEMPLATES: Partial<Record<ClaimType | MandatoryCheckId | '
 /** Contract clause templates (Traficom/KKV checklist style ⚠️ to verify). */
 export const CLAUSE_TEXTS: Record<'parties' | 'vehicle_identity' | 'price_payment' | 'handover_time' | 'documents_keys' | 'ownership_notification' | 'insurance_note', Texts> = {
   parties: {
-    en: 'Seller: ______ (registered owner). Buyer: ______.',
-    fi: 'Myyjä: ______ (rekisteröity omistaja). Ostaja: ______.',
+    en: 'Seller: {seller} (registered owner). Buyer: {buyer}.',
+    fi: 'Myyjä: {seller} (rekisteröity omistaja). Ostaja: {buyer}.',
   },
   vehicle_identity: {
-    en: 'Vehicle: {car}, registration {plate}, VIN ______, odometer at handover ______ km.',
-    fi: 'Ajoneuvo: {car}, rekisterinumero {plate}, valmistenumero ______, mittarilukema luovutettaessa ______ km.',
+    en: 'Vehicle: {car}, registration {plate}, VIN {vin}, odometer at handover {odometer} km.',
+    fi: 'Ajoneuvo: {car}, rekisterinumero {plate}, valmistenumero {vin}, mittarilukema luovutettaessa {odometer} km.',
   },
   price_payment: {
     en: 'Price {price}, paid by bank transfer at handover. No payment before the buyer has seen the car and its papers.',
     fi: 'Kauppahinta {price}, maksetaan tilisiirtona luovutuksen yhteydessä. Ei maksuja ennen kuin ostaja on nähnyt auton ja paperit.',
   },
   handover_time: {
-    en: 'Handover date and time: ______. Risk and responsibility pass to the buyer at this moment.',
-    fi: 'Luovutuspäivä ja -aika: ______. Vastuu autosta siirtyy ostajalle tällä hetkellä.',
+    en: 'Handover date and time: {handover}. Risk and responsibility pass to the buyer at this moment.',
+    fi: 'Luovutuspäivä ja -aika: {handover}. Vastuu autosta siirtyy ostajalle tällä hetkellä.',
   },
   documents_keys: {
     en: 'Handed over: registration certificate, service book, {keys} key(s).',
@@ -309,19 +313,19 @@ export const CLAUSE_TEXTS: Record<'parties' | 'vehicle_identity' | 'price_paymen
 };
 
 export const ASSURANCE_TEXT: Texts = {
-  en: 'Seller assures that this is true: “{quote}” ({claim}). If it proves untrue, the buyer may claim a price reduction or cancel the sale.',
-  fi: 'Myyjä vakuuttaa tämän pitävän paikkansa: ”{quote}” ({claim}). Jos se osoittautuu vääräksi, ostaja voi vaatia hinnanalennusta tai purkaa kaupan.',
+  en: 'Seller assures that this is true: “{quote}”{translation} ({claim}). If it proves untrue, the buyer may claim a price reduction or cancel the sale.',
+  fi: 'Myyjä vakuuttaa tämän pitävän paikkansa: ”{quote}”{translation} ({claim}). Jos se osoittautuu vääräksi, ostaja voi vaatia hinnanalennusta tai purkaa kaupan.',
 };
 
 /** Replaces the seller assurance for a claim the checks contradicted: never ask the seller to assure a known falsehood. */
 export const DISPUTED_TEXT: Texts = {
-  en: 'The ad stated: “{quote}” ({claim}). The buyer’s checks contradict this. Actual condition agreed at handover: ______. Both parties confirm the statement above.',
-  fi: 'Ilmoituksessa luki: ”{quote}” ({claim}). Ostajan tarkistukset ovat ristiriidassa tämän kanssa. Luovutuksessa todettu todellinen kunto: ______. Molemmat osapuolet vahvistavat yllä olevan.',
+  en: 'The ad stated: “{quote}”{translation} ({claim}). The buyer’s checks contradict this. Actual condition agreed at handover: ______. Both parties confirm the statement above.',
+  fi: 'Ilmoituksessa luki: ”{quote}”{translation} ({claim}). Ostajan tarkistukset ovat ristiriidassa tämän kanssa. Luovutuksessa todettu todellinen kunto: ______. Molemmat osapuolet vahvistavat yllä olevan.',
 };
 
 export const DISPUTED_ODOMETER_TEXT: Texts = {
-  en: 'Odometer reading at handover: ______ km. The registry recorded {regKm} at the {date} inspection; the seller’s ad stated {adKm}. Both parties confirm the reading above.',
-  fi: 'Mittarilukema luovutuksessa: ______ km. Rekisteriin kirjattiin {regKm} katsastuksessa {date}; myyjän ilmoituksessa luki {adKm}. Molemmat osapuolet vahvistavat yllä olevan lukeman.',
+  en: 'Odometer reading at handover: {odometer} km. The registry recorded {regKm} at the {date} inspection; the seller’s ad stated {adKm}. Both parties confirm the reading above.',
+  fi: 'Mittarilukema luovutuksessa: {odometer} km. Rekisteriin kirjattiin {regKm} katsastuksessa {date}; myyjän ilmoituksessa luki {adKm}. Molemmat osapuolet vahvistavat yllä olevan lukeman.',
 };
 
 export const DISCLOSED_DEFECTS_TEXT: Texts = {

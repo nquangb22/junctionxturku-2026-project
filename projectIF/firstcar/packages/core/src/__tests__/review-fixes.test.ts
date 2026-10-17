@@ -43,7 +43,7 @@ describe('replaceable answers', () => {
     c = apply(c, { type: 'owner_compared', sellerNameFromId: 'Anna Esimerkki' }, { type: 'vin_confirmed', matches: true }, { type: 'payment_confirmed', safe: true });
     for (const id of ['mandatory:owner_matches_seller', 'mandatory:vin_matches', 'mandatory:safe_payment']) {
       expect(item(c, id).status).toBe('verified');
-      expect(item(c, id).findings).toEqual([]);
+      expect(item(c, id).findings.filter((f) => f.kind !== 'match')).toEqual([]);
     }
     expect(evaluateGate(c).blockers.filter((b) => b.kind === 'red_flag')).toHaveLength(0);
   });

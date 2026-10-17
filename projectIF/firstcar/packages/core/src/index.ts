@@ -1,6 +1,7 @@
 export * from './types';
 export * from './money';
 export * from './text';
+export * from './translate';
 export * from './redact';
 export * from './extract-rules';
 export * from './pipeline';

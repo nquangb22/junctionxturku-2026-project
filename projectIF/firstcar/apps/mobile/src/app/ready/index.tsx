@@ -1,5 +1,5 @@
-import { eur, type AgeBand, type BuyerProfile, type CarSpec, type CoverIntent, type Density, type Range, type Money } from '@firstcar/core';
-import { Stack, router } from 'expo-router';
+import { eur, type AgeBand, type BuyerProfile, type CarSpec, type CoverIntent, type Density, type Money, type PaymentMethod, type Range } from '@firstcar/core';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useSession } from '@/state/session';
@@ -36,6 +36,8 @@ const bandKey = (table: Record<string, Range<Money> | undefined>, value?: Range<
 export default function ReadyInputs() {
   const { t, prefs } = useSession();
   const { data, patch } = useStore();
+  // Where the flow was started from, so the result can send the user back there.
+  const { from, caseId } = useLocalSearchParams<{ from?: string; caseId?: string }>();
   const prev = data.profile;
 
   const [car, setCar] = useState<string | undefined>(Object.entries(CAR_PRESETS).find(([, c]) => c.model === data.readinessCar?.model)?.[0]);
@@ -46,8 +48,9 @@ export default function ReadyInputs() {
   const [savings, setSavings] = useState<string | undefined>(prev ? bandKey(SAVINGS, prev.savings) : undefined);
   const [cover, setCover] = useState<CoverIntent>(prev?.coverIntent ?? 'liability_plus_partial');
   const [deductible, setDeductible] = useState<number>(prev ? prev.deductible.minor / 100 : 300);
+  const [payment, setPayment] = useState<PaymentMethod | undefined>(prev?.payment);
 
-  const complete = car && density && age && firstTime !== undefined && income && savings;
+  const complete = car && density && age && firstTime !== undefined && income && savings && payment;
 
   const calculate = () => {
     if (!complete) return;
@@ -61,9 +64,10 @@ export default function ReadyInputs() {
       savings: SAVINGS[savings],
       coverIntent: cover,
       deductible: eur(deductible),
+      payment,
     };
     patch({ profile, readinessCar: CAR_PRESETS[car] });
-    router.replace('/ready/result');
+    router.replace({ pathname: '/ready/result', params: from && caseId ? { from, caseId } : {} });
   };
 
   const bands = (table: Record<string, unknown>) => Object.keys(table).map((k) => ({ value: k, label: k === 'skip' ? t('common.skip') : `${k} €` }));
@@ -95,6 +99,9 @@ export default function ReadyInputs() {
       </Section>
       <Section title={t('ready.savings')}>
         <Choice label={t('ready.savings')} value={savings} onChange={setSavings} options={bands(SAVINGS)} />
+      </Section>
+      <Section title={t('ready.payment')}>
+        <Choice label={t('ready.payment')} value={payment} onChange={setPayment} options={(['savings', 'loan', 'unsure'] as const).map((m) => ({ value: m, label: t(`payment.${m}`) }))} />
       </Section>
       <Section title={t('ready.cover')}>
         <Choice
