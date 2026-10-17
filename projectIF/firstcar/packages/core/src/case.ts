@@ -15,6 +15,7 @@ import {
   registryEvidence,
 } from './ledger';
 import type { AnalysedAd } from './pipeline';
+import { withQuoteTranslation } from './translate';
 import type {
   AgeBand,
   CaseStatus,
@@ -191,7 +192,7 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
           if (cl.id !== e.claimId) return cl;
           const edited = { ...cl, value: e.value ?? cl.value, extractor: 'user' as const, confidence: 'high' as const };
           // A rewritten quote no longer points at the ad text, so drop its highlight offsets.
-          return quote !== undefined && quote !== cl.quote ? { ...edited, quote, rawStart: undefined, rawEnd: undefined } : edited;
+          return quote !== undefined && quote !== cl.quote ? withQuoteTranslation({ ...edited, quote, rawStart: undefined, rawEnd: undefined }) : edited;
         }),
       }, ctx);
     }
@@ -203,7 +204,7 @@ export function applyEvent(c: PurchaseCase, e: CaseEvent, ctx: Ctx): ApplyResult
     case 'claim_added': {
       if (!inReview) return fail('claims_locked');
       const id = nextNumericId(c.claims.map((cl) => cl.id), 'u');
-      const claim = { id, type: e.claimType, value: e.value, quote: e.quote, quoteStart: Number.MAX_SAFE_INTEGER, extractor: 'user' as const, confidence: 'high' as const };
+      const claim = withQuoteTranslation({ id, type: e.claimType, value: e.value, quote: e.quote, quoteStart: Number.MAX_SAFE_INTEGER, extractor: 'user' as const, confidence: 'high' as const });
       return bump(c, { ...c, claims: [...c.claims, claim] }, ctx);
     }
 

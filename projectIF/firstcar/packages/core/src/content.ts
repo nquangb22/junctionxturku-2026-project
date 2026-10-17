@@ -313,14 +313,14 @@ export const CLAUSE_TEXTS: Record<'parties' | 'vehicle_identity' | 'price_paymen
 };
 
 export const ASSURANCE_TEXT: Texts = {
-  en: 'Seller assures that this is true: “{quote}” ({claim}). If it proves untrue, the buyer may claim a price reduction or cancel the sale.',
-  fi: 'Myyjä vakuuttaa tämän pitävän paikkansa: ”{quote}” ({claim}). Jos se osoittautuu vääräksi, ostaja voi vaatia hinnanalennusta tai purkaa kaupan.',
+  en: 'Seller assures that this is true: “{quote}”{translation} ({claim}). If it proves untrue, the buyer may claim a price reduction or cancel the sale.',
+  fi: 'Myyjä vakuuttaa tämän pitävän paikkansa: ”{quote}”{translation} ({claim}). Jos se osoittautuu vääräksi, ostaja voi vaatia hinnanalennusta tai purkaa kaupan.',
 };
 
 /** Replaces the seller assurance for a claim the checks contradicted: never ask the seller to assure a known falsehood. */
 export const DISPUTED_TEXT: Texts = {
-  en: 'The ad stated: “{quote}” ({claim}). The buyer’s checks contradict this. Actual condition agreed at handover: ______. Both parties confirm the statement above.',
-  fi: 'Ilmoituksessa luki: ”{quote}” ({claim}). Ostajan tarkistukset ovat ristiriidassa tämän kanssa. Luovutuksessa todettu todellinen kunto: ______. Molemmat osapuolet vahvistavat yllä olevan.',
+  en: 'The ad stated: “{quote}”{translation} ({claim}). The buyer’s checks contradict this. Actual condition agreed at handover: ______. Both parties confirm the statement above.',
+  fi: 'Ilmoituksessa luki: ”{quote}”{translation} ({claim}). Ostajan tarkistukset ovat ristiriidassa tämän kanssa. Luovutuksessa todettu todellinen kunto: ______. Molemmat osapuolet vahvistavat yllä olevan.',
 };
 
 export const DISPUTED_ODOMETER_TEXT: Texts = {

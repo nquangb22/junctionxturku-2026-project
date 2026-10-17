@@ -7,6 +7,7 @@ import { renderFinding } from '../ledger';
 import { mileageGap, VALUE_PER_KM_EUR } from '../mileage';
 import { eur } from '../money';
 import { analyseAd } from '../pipeline';
+import { quoteTranslationFor, translateQuote } from '../translate';
 import type { BuyerProfile, PurchaseCase, RegistryCheck } from '../types';
 
 const NOW = new Date('2026-10-17T10:00:00Z');
@@ -174,5 +175,33 @@ describe('contract blanks (S7)', () => {
     expect(text('handover_time')).toContain('20.10.2026 at 17:00');
     const owner = apply(filled, { type: 'owner_compared', sellerNameFromId: 'Mikko Mallikas' });
     expect(owner.clauses.find((cl) => cl.kind === 'parties')!.text).toContain('Seller: Mikko Mallikas');
+  });
+});
+
+describe('quote translations (T5)', () => {
+  it('translates every demo-ad quote in both directions', () => {
+    for (const ad of DEMO_ADS) {
+      const c = newCase(ad.id);
+      for (const cl of c.claims) {
+        expect(cl.quoteLang, cl.quote).toBeDefined();
+        expect(cl.quoteTranslated, `${ad.id}: ${cl.quote}`).toBeTruthy();
+      }
+    }
+    expect(translateQuote('Ajettu 180 000 km', 'fi')).toBe('Driven 180 000 km');
+    expect(translateQuote('Jakohihna vaihdettu 90 tkm', 'fi')).toBe('Timing belt replaced at 90 000 km');
+    expect(translateQuote('Mileage 98 000 km', 'en')).toBe('Ajettu 98 000 km');
+  });
+
+  it('shows a translation only when the quote language differs from the UI', () => {
+    const fiClaim = newCase('golf-odometer').claims.find((cl) => cl.type === 'odometer')!;
+    expect(quoteTranslationFor(fiClaim, 'en')).toBe('Driven 180 000 km');
+    expect(quoteTranslationFor(fiClaim, 'fi')).toBeNull();
+    const enClaim = newCase('focus-tax').claims.find((cl) => cl.type === 'odometer')!;
+    expect(quoteTranslationFor(enClaim, 'fi')).toBe('Ajettu 98 000 km');
+    expect(quoteTranslationFor(enClaim, 'en')).toBeNull();
+  });
+
+  it('returns null rather than guessing', () => {
+    expect(translateQuote('Moottori käy tasaisesti', 'fi')).toBeNull();
   });
 });

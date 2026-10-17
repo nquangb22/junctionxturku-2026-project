@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { STATUS_ICON, STATUS_TONE } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
-import { Badge } from '@/ui/primitives';
+import { Badge, Txt } from '@/ui/primitives';
 
 /** Status = colour + icon + word, never colour alone (§10). */
 export function StatusPill({ status, t }: { status: VerificationStatus; t: Translate }) {
@@ -46,5 +46,15 @@ export function QuoteHighlight({ text, claims, focusId }: { text: string; claims
         )}
       </Text>
     </View>
+  );
+}
+
+/** Second line under an ad quote when the ad is in the other language. The original stays first: it is the evidence. */
+export function QuoteTranslation({ text, t }: { text: string | null; t: Translate }) {
+  if (!text) return null;
+  return (
+    <Txt variant="small">
+      <Txt variant="caption">{t('common.translation')}: </Txt>“{text}”
+    </Txt>
   );
 }

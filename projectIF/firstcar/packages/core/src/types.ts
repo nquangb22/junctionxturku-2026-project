@@ -216,6 +216,10 @@ export interface SellerClaim {
   rawEnd?: number;
   extractor: 'llm' | 'rules' | 'user';
   confidence: Confidence;
+  /** Language of the quote; set at extraction. */
+  quoteLang?: Locale;
+  /** The quote in the other app language, or null when no translation is available. */
+  quoteTranslated?: string | null;
 }
 
 export type EvidenceStrength = 'official' | 'professional' | 'document' | 'observed' | 'seller_statement';

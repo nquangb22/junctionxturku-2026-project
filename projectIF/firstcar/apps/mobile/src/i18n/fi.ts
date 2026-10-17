@@ -388,4 +388,6 @@ export const fi: Record<MessageKey, string> = {
   'contract.field.vin': 'Valmistenumero (autosta tai rekisteriotteesta)',
   'contract.field.odometer': 'Mittarilukema luovutettaessa (km)',
   'contract.field.handover': 'Luovutuspäivä ja -aika',
+  'common.translation': 'Käännös',
+  'item.inFinnish': 'Suomeksi:',
 };

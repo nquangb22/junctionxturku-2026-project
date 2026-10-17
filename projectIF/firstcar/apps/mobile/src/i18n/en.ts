@@ -386,6 +386,8 @@ export const en = {
   'contract.field.vin': 'VIN (from the car or the registration certificate)',
   'contract.field.odometer': 'Odometer at handover (km)',
   'contract.field.handover': 'Handover date and time',
+  'common.translation': 'Translation',
+  'item.inFinnish': 'In Finnish:',
 } as const;
 
 export type MessageKey = keyof typeof en;

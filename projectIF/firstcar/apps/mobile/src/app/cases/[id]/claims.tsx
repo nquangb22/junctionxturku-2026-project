@@ -1,4 +1,4 @@
-import { CLAIM_TITLES, type ClaimType, type ClaimValue, type SellerClaim } from '@firstcar/core';
+import { CLAIM_TITLES, quoteTranslationFor, type ClaimType, type ClaimValue, type SellerClaim } from '@firstcar/core';
 import { Redirect, Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -11,7 +11,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { describeValue } from '@/ui/case-helpers';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
-import { QuoteHighlight, StatusPill } from '@/ui/status';
+import { QuoteHighlight, QuoteTranslation, StatusPill } from '@/ui/status';
 
 const ADDABLE: ClaimType[] = ['service_history', 'timing_belt', 'clutch', 'no_rust', 'no_accidents', 'tyres_included', 'known_defects', 'other'];
 /** These may appear more than once; every other type is one claim per ad. */
@@ -244,6 +244,7 @@ function ClaimRow({
       ) : (
         <>
           <Txt variant="small">“{claim.quote}”</Txt>
+          <QuoteTranslation text={quoteTranslationFor(claim, locale)} t={t} />
           {onRemove || onEdit ? (
             <View style={styles.actions}>
               {onEdit ? <Button kind="ghost" label={t('claims.edit')} onPress={startEdit} /> : null}

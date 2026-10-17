@@ -6,6 +6,7 @@ import { detectInjection, extractWithRules, type Extraction } from './extract-ru
 import { redactAd } from './redact';
 import { cleanAdText, findSpan, isGrounded, normaliseForMatch } from './text';
 import type { ClaimType, ClaimValue, Confidence, Listing, SellerClaim, SellerType } from './types';
+import { withQuoteTranslation } from './translate';
 
 /** The structured output the LLM must return (ExtractionV1 in §5). */
 export interface LlmExtractionV1 {
@@ -189,5 +190,5 @@ export function analyseAd(raw: string, opts: AnalyseOptions): AnalysedAd {
     extractor: llm ? (opts.llmSource ?? 'llm+rules') : 'rules',
     capturedAt: opts.now.toISOString(),
   };
-  return { listing, claims };
+  return { listing, claims: claims.map(withQuoteTranslation) };
 }
