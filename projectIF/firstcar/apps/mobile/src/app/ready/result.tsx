@@ -7,6 +7,7 @@ import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useStore } from '@/state/store';
+import { IconLine } from '@/ui/icon';
 import { Badge, Button, Card, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { VerdictCard } from '@/ui/verdict-card';
 
@@ -82,7 +83,7 @@ export default function ReadyResult() {
             </View>
           ))}
           <Txt variant="small">{t('result.tradeoffNote')}</Txt>
-          <Txt variant="caption">⚠️ {t('common.estimate')}</Txt>
+          <IconLine icon="warning" variant="caption">{t('common.estimate')}</IconLine>
         </Card>
       </Section>
 

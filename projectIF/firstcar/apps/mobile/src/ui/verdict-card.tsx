@@ -1,9 +1,10 @@
 import { LOAN_APR, LOAN_MONTHS, VERDICT_THRESHOLDS, formatEur, type OwnershipBudget, type VerdictLevel } from '@firstcar/core';
-import { View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Spacing, VERDICT_TONE } from '@/constants/theme';
+import { Fonts, Radius, Spacing, VERDICT_TONE, toneColors } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
-import { Badge, Card, Txt } from '@/ui/primitives';
+import { Card, Txt } from '@/ui/primitives';
 
 const pct = (share: number) => Math.round(share * 100);
 
@@ -21,15 +22,19 @@ function bands(t: Translate): { level: Exclude<VerdictLevel, 'unknown'>; range: 
 export function VerdictCard({ budget, t }: { budget: OwnershipBudget; t: Translate }) {
   const { level, shareOfIncome, incomeMid } = budget.verdict;
   const cash = budget.cashCheck;
+  const tone = toneColors(usePalette(), VERDICT_TONE[level]);
   return (
     <>
       <Card tone={VERDICT_TONE[level]}>
         {/* Without income there is no share and no verdict word: only the monthly figure. */}
         {shareOfIncome !== undefined ? (
           <>
-            <Txt variant="title" accessibilityRole="header">
-              {`${pct(shareOfIncome)} %: ${t(`verdict.${level}`)}`}
-            </Txt>
+            <View style={styles.headline} accessible accessibilityRole="header" accessibilityLabel={`${pct(shareOfIncome)} %: ${t(`verdict.${level}`)}`}>
+              <Text style={[styles.big, { color: tone.fg }]}>{`${pct(shareOfIncome)} %`}</Text>
+              <Txt variant="h2" color={tone.fg}>
+                {t(`verdict.${level}`)}
+              </Txt>
+            </View>
             <Txt>{t('result.share', { pct: pct(shareOfIncome) })}</Txt>
           </>
         ) : null}
@@ -46,21 +51,41 @@ export function VerdictCard({ budget, t }: { budget: OwnershipBudget; t: Transla
           <Txt variant="small">{t('result.loanNote', { principal: formatEur(cash.loanPrincipal), years: LOAN_MONTHS / 12, apr: Math.round(LOAN_APR * 100) })}</Txt>
         ) : null}
       </Card>
-      {shareOfIncome !== undefined ? (
-        <View style={{ gap: Spacing.xs }}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
-            {bands(t).map((b) => (
-              <Badge
-                key={b.level}
-                tone={b.level === level ? VERDICT_TONE[b.level] : 'neutral'}
-                icon={b.level === level ? '▶' : undefined}
-                label={`${t(`verdict.${b.level}`)} · ${b.range}${b.level === level ? ` (${t('result.yourBand')})` : ''}`}
-              />
-            ))}
-          </View>
-          <Txt variant="caption">{t('result.rule')}</Txt>
-        </View>
-      ) : null}
+      {shareOfIncome !== undefined ? <BandMeter level={level} t={t} /> : null}
     </>
   );
 }
+
+/** The four bands as one segmented bar; the buyer's band is filled and labelled, the rest stay pale. */
+function BandMeter({ level, t }: { level: VerdictLevel; t: Translate }) {
+  const p = usePalette();
+  return (
+    <View style={{ gap: Spacing.sm }}>
+      <View style={styles.meter}>
+        {bands(t).map((b) => {
+          const c = toneColors(p, VERDICT_TONE[b.level]);
+          const mine = b.level === level;
+          return (
+            <View key={b.level} style={styles.segment} accessible accessibilityLabel={`${t(`verdict.${b.level}`)}, ${b.range}${mine ? `, ${t('result.yourBand')}` : ''}`}>
+              <View style={[styles.bar, { backgroundColor: mine ? c.fg : c.bg }]} />
+              <Txt variant="caption" color={mine ? c.fg : p.textSecondary} style={mine ? styles.mine : undefined}>
+                {t(`verdict.${b.level}`)}
+              </Txt>
+              <Txt variant="caption">{b.range}</Txt>
+            </View>
+          );
+        })}
+      </View>
+      <Txt variant="caption">{t('result.rule')}</Txt>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  headline: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: Spacing.md },
+  big: { fontFamily: Fonts.semibold, fontSize: 44, lineHeight: 52, letterSpacing: -1 },
+  meter: { flexDirection: 'row', gap: Spacing.xs },
+  segment: { flex: 1, gap: 2 },
+  bar: { height: 8, borderRadius: Radius.pill, marginBottom: Spacing.xs },
+  mine: { fontFamily: Fonts.semibold },
+});

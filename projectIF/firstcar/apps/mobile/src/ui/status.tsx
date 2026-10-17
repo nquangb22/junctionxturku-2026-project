@@ -1,7 +1,7 @@
 import type { SellerClaim, VerificationStatus } from '@firstcar/core';
 import { Text, View } from 'react-native';
 
-import { STATUS_ICON, STATUS_TONE } from '@/constants/theme';
+import { Fonts, Radius, STATUS_ICON, STATUS_TONE, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import type { Translate } from '@/i18n';
 import { Badge, Txt } from '@/ui/primitives';
@@ -12,7 +12,7 @@ export function StatusPill({ status, t }: { status: VerificationStatus; t: Trans
 }
 
 export function DemoBadge({ t }: { t: Translate }) {
-  return <Badge tone="info" icon="ⓘ" label={t('common.demoData')} />;
+  return <Badge tone="info" icon="info" label={t('common.demoData')} />;
 }
 
 /** The raw ad text with each claim's quote highlighted. Highlights come from device-only raw offsets. */
@@ -33,11 +33,11 @@ export function QuoteHighlight({ text, claims, focusId }: { text: string; claims
   if (cursor < text.length) parts.push({ text: text.slice(cursor) });
 
   return (
-    <View style={{ borderRadius: 12, borderWidth: 1, borderColor: p.border, backgroundColor: p.surface, padding: 16 }}>
-      <Text style={{ color: p.text, fontSize: 15, lineHeight: 23 }}>
+    <View style={{ borderRadius: Radius.lg, borderWidth: 1, borderColor: p.border, backgroundColor: p.surface, padding: Spacing.lg }}>
+      <Text style={{ color: p.text, fontFamily: Fonts.regular, fontSize: 15, lineHeight: 24 }}>
         {parts.map((part, i) =>
           part.claimId ? (
-            <Text key={i} style={{ backgroundColor: p.highlight, fontWeight: part.claimId === focusId ? '800' : '600', textDecorationLine: part.claimId === focusId ? 'underline' : 'none' }}>
+            <Text key={i} style={{ backgroundColor: p.highlight, fontFamily: part.claimId === focusId ? Fonts.bold : Fonts.semibold, textDecorationLine: part.claimId === focusId ? 'underline' : 'none' }}>
               {part.text}
             </Text>
           ) : (

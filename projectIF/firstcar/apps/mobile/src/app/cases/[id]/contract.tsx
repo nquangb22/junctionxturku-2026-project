@@ -4,12 +4,13 @@ import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Platform, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { notify } from '@/ui/dialog';
+import { Icon, IconLine } from '@/ui/icon';
 import { Badge, Button, Card, Screen, Txt } from '@/ui/primitives';
 
 const EDITABLE_STATUSES = new Set(['checking', 'inspecting', 'contract_prep', 'ready_to_buy']);
@@ -55,7 +56,7 @@ export default function Contract() {
       <Txt variant="h2">{t('contract.body')}</Txt>
       {c.clauses.some((cl) => cl.kind === 'disputed_claim') ? (
         <Card tone="danger">
-          <Txt variant="bodyStrong">⚠️ {t('contract.disputedWarning')}</Txt>
+          <IconLine icon="warning" variant="bodyStrong">{t('contract.disputedWarning')}</IconLine>
         </Card>
       ) : null}
       {editable ? <ContractFields c={c} /> : null}
@@ -74,9 +75,7 @@ export default function Contract() {
               {required ? (
                 <Badge tone="neutral" label={t('contract.required')} />
               ) : (
-                <Txt variant="h2" importantForAccessibility="no">
-                  {cl.included ? '☑' : '☐'}
-                </Txt>
+                <Icon name={cl.included ? 'checkbox' : 'checkboxEmpty'} size={26} color={cl.included ? p.primary : p.textSecondary} />
               )}
               {cl.kind === 'seller_assurance' ? <Badge tone="warning" label={t('contract.assurance')} /> : null}
               {cl.kind === 'disputed_claim' ? <Badge tone="danger" label={t('contract.disputed')} /> : null}
@@ -122,7 +121,7 @@ function ContractFields({ c }: { c: PurchaseCase }) {
           keyboardType={numeric ? 'number-pad' : 'default'}
           autoCorrect={false}
           maxLength={120}
-          style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+          style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
         />
       ))}
     </View>
@@ -130,7 +129,7 @@ function ContractFields({ c }: { c: PurchaseCase }) {
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
+  input: { fontFamily: Fonts.regular, minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
   clause: { borderWidth: 1.5, borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.xs },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
 });

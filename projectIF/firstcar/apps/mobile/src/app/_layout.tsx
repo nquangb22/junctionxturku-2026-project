@@ -1,10 +1,15 @@
+import { Figtree_400Regular } from '@expo-google-fonts/figtree/400Regular';
+import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
+import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
+import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
+import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { makeT } from '@/i18n';
 import { useReminderSync } from '@/reminders/use-reminder-sync';
@@ -36,6 +41,9 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
 
 export default function RootLayout() {
   const scheme = useColorScheme();
+  // The splash screen stays up until the fonts are in (or failed: then the system font is used).
+  const [fontsLoaded, fontError] = useFonts({ Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold });
+  if (!fontsLoaded && !fontError) return null;
   return (
     <SafeAreaProvider>
       <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -56,9 +64,10 @@ function AppStack() {
     <View style={styles.fill}>
       <Stack
         screenOptions={({ route }) => ({
-          headerStyle: { backgroundColor: p.surface },
+          headerStyle: { backgroundColor: p.background },
+          headerShadowVisible: false,
           headerTintColor: p.text,
-          headerTitleStyle: { fontWeight: '700' },
+          headerTitleStyle: { fontFamily: Fonts.semibold, fontSize: 17 },
           contentStyle: { backgroundColor: p.background },
           // Our own button, so it survives a reload or deep link (empty history); Home never has one.
           headerBackVisible: false,

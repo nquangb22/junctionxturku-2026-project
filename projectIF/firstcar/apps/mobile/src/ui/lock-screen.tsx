@@ -4,6 +4,7 @@ import { Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import type { MessageKey, Translate } from '@/i18n';
 import { confirmAction } from '@/ui/dialog';
+import { Icon } from '@/ui/icon';
 import { Button, Txt } from '@/ui/primitives';
 
 /** Why the vault could not be opened. Only `reset` deletes anything, and only after a confirmation. */
@@ -20,7 +21,7 @@ export function PrivacyCover() {
   const p = usePalette();
   return (
     <View style={[styles.root, StyleSheet.absoluteFill, { backgroundColor: p.background }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden aria-hidden>
-      <Txt style={styles.icon}>🔒</Txt>
+      <Icon name="lock" size={48} color={p.textSecondary} />
     </View>
   );
 }
@@ -32,9 +33,9 @@ export function LockScreen(props: Props) {
   return (
     <View style={[styles.root, { backgroundColor: p.background }, !props.failure && props.overlay ? StyleSheet.absoluteFill : null]} accessibilityViewIsModal>
       <View style={styles.inner}>
-        <Txt style={styles.icon} importantForAccessibility="no">
-          🔒
-        </Txt>
+        <View style={styles.icon}>
+          <Icon name="lock" size={48} color={p.primary} />
+        </View>
         <Txt variant="title" accessibilityRole="header" style={styles.center}>
           {t('lock.title')}
         </Txt>
@@ -69,6 +70,6 @@ export function LockScreen(props: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl },
   inner: { width: '100%', maxWidth: 420, gap: Spacing.lg },
-  icon: { fontSize: 48, lineHeight: 56, textAlign: 'center' },
+  icon: { alignItems: 'center' },
   center: { textAlign: 'center' },
 });

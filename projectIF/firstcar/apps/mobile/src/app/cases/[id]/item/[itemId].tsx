@@ -20,11 +20,12 @@ import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
-import { Radius, Spacing, type StatusTone } from '@/constants/theme';
+import { Fonts, Radius, Spacing, type StatusTone } from '@/constants/theme';
 import { useCaseId } from '@/hooks/use-case-id';
 import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
+import { IconLine } from '@/ui/icon';
 import { Badge, Button, Card, Choice, Screen, Section, Txt } from '@/ui/primitives';
 import { confirmAction } from '@/ui/dialog';
 import { QuoteTranslation, StatusPill } from '@/ui/status';
@@ -198,10 +199,10 @@ function MandatoryControls({ c, item, onResult }: { c: PurchaseCase; item: Verif
             autoCapitalize="words"
             autoCorrect={false}
             maxLength={80}
-            style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+            style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
           />
           <Button label={t('item.compare')} disabled={!name.trim()} onPress={() => onResult(caseEvent(c.id, { type: 'owner_compared', sellerNameFromId: name }))} />
-          <Txt variant="caption">🔒 {t('registry.ownerLocal')}</Txt>
+          <IconLine icon="lock" variant="caption">{t('registry.ownerLocal')}</IconLine>
         </Card>
       );
     case 'vin_matches':
@@ -247,7 +248,7 @@ function AddEvidence({ c, item, onResult }: { c: PurchaseCase; item: Verificatio
       <Choice label={t('item.addEvidence')} value={kind} onChange={setKind} options={USER_EVIDENCE.map((k) => ({ value: k, label: t(`evidence.${k}`) }))} />
       {kind ? (
         <Card>
-          {kind === 'seller_message' ? <Txt variant="small">ⓘ {t('item.sellerNeverVerifies')}</Txt> : null}
+          {kind === 'seller_message' ? <IconLine icon="info" variant="small">{t('item.sellerNeverVerifies')}</IconLine> : null}
           <Choice
             label={t('item.evidence')}
             value={outcome}
@@ -264,7 +265,7 @@ function AddEvidence({ c, item, onResult }: { c: PurchaseCase; item: Verificatio
             placeholderTextColor={p.textSecondary}
             accessibilityLabel={t('item.evidenceNote')}
             maxLength={280}
-            style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+            style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
           />
           <Button label={t('item.addEvidence')} onPress={add} disabled={!note.trim()} />
         </Card>
@@ -290,5 +291,5 @@ function EvidenceRow({ e }: { e: Evidence }) {
 
 const styles = StyleSheet.create({
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  input: { minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
+  input: { fontFamily: Fonts.regular, minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 15 },
 });

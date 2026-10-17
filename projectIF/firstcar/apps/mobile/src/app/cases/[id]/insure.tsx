@@ -8,6 +8,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { caseTitle, formatDate } from '@/ui/case-helpers';
+import { IconLine } from '@/ui/icon';
 import { InsuredCard } from '@/ui/insured-card';
 import { Button, Card, Choice, Row, Screen, Section, Txt } from '@/ui/primitives';
 import { DemoBadge } from '@/ui/status';
@@ -111,9 +112,9 @@ export default function Insure() {
             <Row label={t('payload.cover')} value={t(`cover.${buyer.coverIntent}`)} />
             <Row label={t('payload.deductible')} value={formatEur(buyer.deductible)} />
           </Card>
-          <Txt variant="bodyStrong" color={p.success}>
-            🔒 {t('insure.notShared')}
-          </Txt>
+          <IconLine icon="lock" variant="bodyStrong" color={p.success}>
+            {t('insure.notShared')}
+          </IconLine>
         </Section>
       ) : null}
 
@@ -158,7 +159,7 @@ export default function Insure() {
       {h?.status === 'bound' ? <Button label={t('insure.register')} onPress={register} loading={busy} /> : null}
       {c.status === 'registered' || c.status === 'owned' ? (
         <Card tone="success">
-          <Txt variant="bodyStrong">✓ {t('insure.done')}</Txt>
+          <IconLine icon="check" variant="bodyStrong">{t('insure.done')}</IconLine>
           {c.status === 'registered' ? <Button label={t('insure.toOwn')} onPress={own} /> : <Button label={t('insure.toOwn')} onPress={openMyCar} />}
         </Card>
       ) : null}

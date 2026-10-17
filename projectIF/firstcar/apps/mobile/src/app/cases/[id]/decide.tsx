@@ -10,6 +10,7 @@ import { useSession } from '@/state/session';
 import { useCase, useStore } from '@/state/store';
 import { carForCase } from '@/ui/case-helpers';
 import { confirmAction } from '@/ui/dialog';
+import { IconLine } from '@/ui/icon';
 import { Badge, Button, Card, NavCard, Screen, Section, Txt } from '@/ui/primitives';
 
 export default function Decide() {
@@ -75,7 +76,7 @@ export default function Decide() {
         </Card>
       ) : gate.passes ? (
         <Card tone="success">
-          <Txt variant="title">✓ {t('decide.ready')}</Txt>
+          <IconLine icon="check" variant="title">{t('decide.ready')}</IconLine>
         </Card>
       ) : (
         <Section title={t('decide.blocked')}>

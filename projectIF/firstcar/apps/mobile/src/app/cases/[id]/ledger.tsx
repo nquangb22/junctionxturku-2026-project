@@ -7,7 +7,8 @@ import { useCaseId } from '@/hooks/use-case-id';
 import type { Translate } from '@/i18n';
 import { useSession } from '@/state/session';
 import { useCase } from '@/state/store';
-import { Badge, NavCard, Screen, Txt } from '@/ui/primitives';
+import { IconLine, type IconName } from '@/ui/icon';
+import { Badge, NavCard, Screen } from '@/ui/primitives';
 import { StatusPill } from '@/ui/status';
 
 const ORDER: Record<VerificationStatus, number> = { not_verified: 0, needs_inspection: 1, awaiting_evidence: 2, unchecked: 3, verified: 4 };
@@ -23,7 +24,7 @@ export default function Ledger() {
   return (
     <Screen>
       <Stack.Screen options={{ title: t('ledger.title') }} />
-      {c.registry?.isMock ? <Txt variant="caption">ⓘ {t('common.demoData')}: traficom-mock</Txt> : null}
+      {c.registry?.isMock ? <IconLine icon="info" variant="caption">{t('common.demoData')}: traficom-mock</IconLine> : null}
       {items.map((item) => (
         <NavCard
           key={item.id}
@@ -38,15 +39,15 @@ export default function Ledger() {
   );
 }
 
-type ExtraBadge = { tone: StatusTone; label: string; icon?: string };
+type ExtraBadge = { tone: StatusTone; label: string; icon?: IconName };
 
 function extraBadges(item: VerificationItem, t: Translate): ExtraBadge[] {
   const badges: ExtraBadge[] = [];
   if (isMandatoryItem(item)) badges.push({ tone: 'info', label: t('ledger.mandatory') });
   if (item.criticality === 'critical') badges.push({ tone: 'neutral', label: t('criticality.critical') });
   if (item.acceptedRisk) badges.push({ tone: 'warning', label: t('ledger.acceptedRisk') });
-  if (isStale(item)) badges.push({ tone: 'warning', icon: '⏱', label: t('ledger.due') });
-  if (item.findings.some((f) => f.kind === 'red_flag')) badges.push({ tone: 'danger', icon: '⚑', label: t('ledger.redFlag') });
+  if (isStale(item)) badges.push({ tone: 'warning', icon: 'clock', label: t('ledger.due') });
+  if (item.findings.some((f) => f.kind === 'red_flag')) badges.push({ tone: 'danger', icon: 'flag', label: t('ledger.redFlag') });
   return badges;
 }
 

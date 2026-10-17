@@ -3,7 +3,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 
 import { useSession } from '@/state/session';
@@ -108,7 +108,7 @@ export default function ReadyInputs() {
   return (
     <Screen footer={<Button label={t('ready.calculate')} onPress={calculate} disabled={!complete} />}>
       <Stack.Screen options={{ title: t('ready.title') }} />
-      <Badge tone="success" icon="🔒" label={t('ready.privacy')} />
+      <Badge tone="success" icon="lock" label={t('ready.privacy')} />
 
       <Section title={t('ready.car')}>
         <Choice
@@ -132,7 +132,7 @@ export default function ReadyInputs() {
               placeholderTextColor={p.textSecondary}
               accessibilityLabel={t('ready.otherPriceInput')}
               maxLength={7}
-              style={[styles.input, { color: p.text, borderColor: p.border, backgroundColor: p.surface }]}
+              style={[styles.input, { color: p.text, borderColor: p.borderStrong, backgroundColor: p.surface }]}
             />
             <Txt variant="caption">{t('ready.otherCarNote')}</Txt>
           </>
@@ -172,5 +172,5 @@ export default function ReadyInputs() {
 }
 
 const styles = StyleSheet.create({
-  input: { minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 18 },
+  input: { fontFamily: Fonts.regular, minHeight: 48, borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, fontSize: 18 },
 });
