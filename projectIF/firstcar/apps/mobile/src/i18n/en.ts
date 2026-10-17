@@ -36,7 +36,7 @@ export const en = {
 
   'home.tagline': 'Buy a used car without nasty surprises.',
   'home.readyTitle': 'Can I afford a car?',
-  'home.readyBody': 'Five taps: verdict, monthly budget, risks and a savings buffer.',
+  'home.readyBody': 'About 2 minutes: verdict, monthly budget, risks and a savings buffer.',
   'home.readyResult': 'Your budget: {verdict}',
   'home.casesTitle': 'Cars I am checking',
   'home.newCase': 'Check a car ad',
@@ -357,6 +357,21 @@ export const en = {
   'own.accepted': 'What you accepted',
   'own.insurance': 'Insurance',
   'own.viewCheck': 'View the full check',
+  'line.loan': 'Loan instalment',
+  'ready.payment': 'How will you pay for the car?',
+  'payment.savings': 'Savings',
+  'payment.loan': 'Car loan',
+  'payment.unsure': 'Not sure',
+  'result.division': 'Monthly car costs {amount} ÷ about {income} take-home pay (middle of the range you picked).',
+  'result.rule': 'Common guidance: keep all car costs under about 15–20 % of take-home pay.',
+  'result.bandUnder': 'under {n} %',
+  'result.bandBetween': '{a}–{b} %',
+  'result.bandOver': '{n} % or more',
+  'result.yourBand': 'you',
+  'result.addIncome': 'Add your take-home pay to see how this fits your budget.',
+  'result.cashCheck': 'Price {price} + buffer {buffer} = {needed} needed up front; you have about {available}.',
+  'result.cashCheckNoSavings': 'Price {price} + buffer {buffer} = {needed} needed up front.',
+  'result.loanNote': 'Includes a loan of about {principal} over {years} years at {apr} % interest (team assumption, not an offer).',
 } as const;
 
 export type MessageKey = keyof typeof en;

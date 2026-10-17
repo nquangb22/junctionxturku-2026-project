@@ -46,7 +46,11 @@ export interface BuyerProfile {
   annualKm?: number;
   coverIntent: CoverIntent;
   deductible: Money;
+  /** How the purchase price is paid. Undefined = not asked (older profiles). */
+  payment?: PaymentMethod;
 }
+
+export type PaymentMethod = 'savings' | 'loan' | 'unsure';
 
 export interface CarSpec {
   make: string;
@@ -62,6 +66,7 @@ export interface CarSpec {
 }
 
 export type BudgetLineKey =
+  | 'loan'
   | 'insurance'
   | 'energy'
   | 'parking'
@@ -83,6 +88,20 @@ export type VerdictLevel = 'comfortable' | 'manageable' | 'tight' | 'over_budget
 export interface Verdict {
   level: VerdictLevel;
   shareOfIncome?: number; // 0..1
+  /** Middle of the income range the share was computed against. */
+  incomeMid?: Money;
+}
+
+/** Can the price and the savings buffer be paid up front? */
+export interface CashCheck {
+  price: Money;
+  buffer: Money;
+  needed: Money;
+  /** Middle of the savings range; undefined when savings were skipped. */
+  available?: Money;
+  /** Borrowed amount behind the loan line, if any. */
+  loanPrincipal?: Money;
+  coveredWithoutLoan?: boolean;
 }
 
 export interface SavingsBuffer {
@@ -130,6 +149,8 @@ export interface OwnershipBudget {
   monthlyTotal: Money;
   verdict: Verdict;
   buffer: SavingsBuffer;
+  /** Only when the car has a price. */
+  cashCheck?: CashCheck;
   scenarioIds: string[];
   computedAt: ISO;
 }

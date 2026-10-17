@@ -8,6 +8,7 @@ import type {
   BudgetLine,
   BuyerProfile,
   CarSpec,
+  CashCheck,
   CoverIntent,
   Density,
   Fuel,
@@ -16,6 +17,7 @@ import type {
   Provenance,
   SavingsBuffer,
   Verdict,
+  VerdictLevel,
 } from './types';
 
 const ASSUMPTION: Provenance = { kind: 'default', isAssumption: true, sourceId: 'team-assumptions-2026-10' };
@@ -27,6 +29,18 @@ export const INSURANCE_YEARLY: Record<AgeBand, number> = { '18-19': 1100, '20-25
 export const COVER_FACTOR: Record<CoverIntent, number> = { liability_only: 1, liability_plus_partial: 1.25, liability_plus_comprehensive: 1.6 };
 
 export const FIRST_TIME_DRIVER_FACTOR = 1.15;
+
+/** Car loan assumptions for the instalment estimate. Team assumption ⚠️, not an offer. */
+export const LOAN_APR = 0.07;
+export const LOAN_MONTHS = 60;
+
+/** Monthly annuity payment for `principal` at `apr` over `months`. */
+export function loanInstalment(principal: Money, apr = LOAN_APR, months = LOAN_MONTHS): Money {
+  const p = toEuros(principal);
+  if (p <= 0 || months <= 0) return eur(0);
+  const r = apr / 12;
+  return eur(r === 0 ? p / months : (p * r) / (1 - (1 + r) ** -months));
+}
 
 const CONSUMPTION: Record<Fuel, { per100: number; unitPrice: number }> = {
   petrol: { per100: 6.5, unitPrice: 1.85 }, // l/100 km, €/l
@@ -92,16 +106,36 @@ export function computeBudget({ profile, car, extraOneOffEur = 0, now }: BudgetI
     line('repair_reserve', repairReserveMonthly(age, car.odometerKm ?? age * 15_000), car.odometerKm ? prov('odometerKm') : ASSUMPTION, extraOneOffEur || undefined),
   ];
 
-  const monthlyTotal = addMoney(...lines.map((l) => l.monthly));
+  const runningTotal = addMoney(...lines.map((l) => l.monthly));
   const oneOffs = addMoney(...lines.map((l) => l.oneOff ?? eur(0)));
   const repairLine = lines.find((l) => l.key === 'repair_reserve')!;
+  const buffer = bufferFor(profile, scaleMoney(repairLine.monthly, 12), runningTotal, oneOffs);
+
+  // Price: what savings leave after the buffer pays towards it; the rest is a loan when the buyer borrows or cannot cover it.
+  let cashCheck: CashCheck | undefined;
+  if (car.price) {
+    const available = profile.savings ? eur(midpoint(profile.savings)) : undefined;
+    const needed = addMoney(car.price, buffer.recommended);
+    const coveredWithoutLoan = available ? available.minor >= needed.minor : undefined;
+    const towardsPrice = available ? Math.max(0, available.minor - buffer.recommended.minor) : 0;
+    const principal = { minor: Math.max(0, car.price.minor - towardsPrice), currency: 'EUR' as const };
+    const borrow = principal.minor > 0 && (profile.payment === 'loan' || (profile.payment !== undefined && coveredWithoutLoan === false));
+    if (borrow) lines.push(line('loan', toEuros(loanInstalment(principal)), ASSUMPTION));
+    cashCheck = { price: car.price, buffer: buffer.recommended, needed, available, coveredWithoutLoan, ...(borrow ? { loanPrincipal: principal } : {}) };
+  }
+
+  const monthlyTotal = addMoney(...lines.map((l) => l.monthly));
+  const verdict = verdictFor(monthlyTotal, profile.netMonthlyIncome);
+  // Not "comfortable" when the price cannot be paid up front without borrowing.
+  if (verdict.level === 'comfortable' && cashCheck?.coveredWithoutLoan === false) verdict.level = 'manageable';
 
   return {
     car,
     lines,
     monthlyTotal,
-    verdict: verdictFor(monthlyTotal, profile.netMonthlyIncome),
-    buffer: bufferFor(profile, scaleMoney(repairLine.monthly, 12), monthlyTotal, oneOffs),
+    verdict,
+    buffer,
+    cashCheck,
     scenarioIds: [],
     computedAt: now.toISOString(),
   };
@@ -114,8 +148,12 @@ export function verdictFor(monthlyTotal: Money, income?: { low: Money; high: Mon
   const mid = midpoint(income);
   if (mid <= 0) return { level: 'unknown' };
   const share = toEuros(monthlyTotal) / mid;
-  const level = share < VERDICT_THRESHOLDS.comfortable ? 'comfortable' : share < VERDICT_THRESHOLDS.manageable ? 'manageable' : share < VERDICT_THRESHOLDS.tight ? 'tight' : 'over_budget';
-  return { level, shareOfIncome: share };
+  return { level: verdictBand(share), shareOfIncome: share, incomeMid: eur(mid) };
+}
+
+/** The verdict band for a share of take-home pay (0..1), from VERDICT_THRESHOLDS. */
+export function verdictBand(share: number): Exclude<VerdictLevel, 'unknown'> {
+  return share < VERDICT_THRESHOLDS.comfortable ? 'comfortable' : share < VERDICT_THRESHOLDS.manageable ? 'manageable' : share < VERDICT_THRESHOLDS.tight ? 'tight' : 'over_budget';
 }
 
 function bufferFor(profile: BuyerProfile, firstYearRepair: Money, oneMonth: Money, oneOffs: Money): SavingsBuffer {
